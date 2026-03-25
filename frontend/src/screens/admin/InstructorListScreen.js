@@ -57,7 +57,7 @@ export default function InstructorListScreen({ navigation }) {
     >
       <View style={styles.avatar}>
         <Text style={styles.avatarText}>
-          {item.fullName?.split(' ').map(n => n[0]).join('').slice(0, 2)}
+          {(item.fullName || 'I').split(' ').map(n => n[0]).join('').slice(0, 2)}
         </Text>
       </View>
       <View style={styles.flex1}>

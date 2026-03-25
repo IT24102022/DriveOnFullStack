@@ -40,14 +40,18 @@ export const AuthProvider = ({ children }) => {
       const res = await api.post('/auth/login', { email, password });
       data = res.data;
       role = data.role || 'admin';
-    } catch {}
+    } catch (error) {
+      // Silently handle admin login failure
+    }
 
     if (!data) {
       try {
         const res = await api.post('/students/login', { email, password });
         data = res.data;
         role = 'student';
-      } catch {}
+      } catch (error) {
+        // Silently handle student login failure
+      }
     }
 
     if (!data) {
@@ -55,7 +59,9 @@ export const AuthProvider = ({ children }) => {
         const res = await api.post('/instructors/login', { email, password });
         data = res.data;
         role = 'instructor';
-      } catch {}
+      } catch (error) {
+        // Silently handle instructor login failure
+      }
     }
 
     if (!data) throw new Error('Invalid email or password');

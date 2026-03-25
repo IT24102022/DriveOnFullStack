@@ -21,6 +21,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/auth',        require('./routes/auth'));
 app.use('/api/sessions',    require('./routes/sessions'));
 app.use('/api/instructors', require('./routes/instructors'));
+app.use('/api/instructor-exams', require('./routes/instructorExams'));
 app.use('/api/vehicles',    require('./routes/vehicles'));
 app.use('/api/payments',    require('./routes/payments'));
 app.use('/api/quizzes',     require('./routes/quizzes'));
@@ -36,11 +37,8 @@ app.use('/api/exams', require('./routes/examSystem'));
 app.use('/api/exam-progress', require('./routes/examProgress'));
 app.use('/api/exam-attendance', require('./routes/examAttendance'));
 app.use('/api/exam-results', require('./routes/examResults'));
-
-// Test route for debugging
-app.get('/api/test', (req, res) => {
-  res.json({ message: 'API is working', timestamp: new Date() });
-});
+app.use('/api/student-exams', require('./routes/studentExams'));
+app.use('/api/attendance', require('./routes/attendance'));
 
 // Health check
 app.get('/', (req, res) => {

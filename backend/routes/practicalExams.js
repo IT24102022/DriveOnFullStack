@@ -3,11 +3,13 @@ const router = express.Router();
 const {
   getPracticalExams,
   getPracticalExamById,
+  createPracticalExam,
+  updatePracticalExam,
+  deletePracticalExam,
+  getUpcomingPracticalExams,
   getAssignableStudents,
   assignStudentToPracticalExam,
-  unassignStudentFromPracticalExam,
-  getUpcomingPracticalExams,
-  importPracticalExams
+  unassignStudentFromPracticalExam
 } = require('../controllers/practicalExamController');
 const { protect, adminOnly } = require('../middleware/auth');
 
@@ -16,10 +18,12 @@ router.get('/', protect, getPracticalExams);
 router.get('/upcoming', protect, getUpcomingPracticalExams);
 router.get('/:id', protect, getPracticalExamById);
 
-// Admin only routes
+// Admin only routes - Full CRUD operations
+router.post('/', protect, adminOnly, createPracticalExam);
+router.put('/:id', protect, adminOnly, updatePracticalExam);
+router.delete('/:id', protect, adminOnly, deletePracticalExam);
 router.get('/:id/assignable-students', protect, adminOnly, getAssignableStudents);
 router.post('/:id/assign-student', protect, adminOnly, assignStudentToPracticalExam);
 router.post('/:id/unassign-student', protect, adminOnly, unassignStudentFromPracticalExam);
-router.post('/import', protect, adminOnly, importPracticalExams);
 
 module.exports = router;

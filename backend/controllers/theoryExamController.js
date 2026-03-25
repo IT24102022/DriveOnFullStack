@@ -4,6 +4,178 @@ const StudentProgress = require('../models/StudentProgress');
 const ExamResult = require('../models/ExamResult');
 const mongoose = require('mongoose');
 
+// @desc    Create new theory exam
+// @route   POST /api/exams/theory
+// @access Private (Admin only)
+const createTheoryExam = async (req, res) => {
+  try {
+    const {
+      examName,
+      date,
+      startTime,
+      endTime,
+      locationOrHall,
+      language,
+      maxSeats,
+      sourceType = 'manual',
+      sourceNote
+    } = req.body;
+
+    // Validation
+    if (!examName || !date || !startTime || !endTime || !locationOrHall) {
+      return res.status(400).json({ 
+        message: 'Missing required fields: examName, date, startTime, endTime, locationOrHall' 
+      });
+    }
+
+    // Validate date and time
+    const examDate = new Date(date);
+    const examStartTime = new Date(`${date}T${startTime}`);
+    const examEndTime = new Date(`${date}T${endTime}`);
+
+    if (examEndTime <= examStartTime) {
+      return res.status(400).json({ 
+        message: 'End time must be after start time' 
+      });
+    }
+
+    if (examDate < new Date().setHours(0, 0, 0, 0)) {
+      return res.status(400).json({ 
+        message: 'Exam date cannot be in the past' 
+      });
+    }
+
+    // Validate max seats
+    if (maxSeats && (maxSeats < 1 || maxSeats > 10)) {
+      return res.status(400).json({ 
+        message: 'Maximum seats must be between 1 and 10' 
+      });
+    }
+
+    // Create exam
+    const exam = new TheoryExam({
+      examName,
+      date: examDate,
+      startTime,
+      endTime,
+      locationOrHall,
+      language,
+      maxSeats: maxSeats || 10,
+      sourceType,
+      sourceNote,
+      createdBy: req.user.id
+    });
+
+    await exam.save();
+
+    res.status(201).json({
+      message: 'Theory exam created successfully',
+      exam
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Update theory exam
+// @route   PUT /api/exams/theory/:id
+// @access Private (Admin only)
+const updateTheoryExam = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      examName,
+      date,
+      startTime,
+      endTime,
+      locationOrHall,
+      language,
+      maxSeats,
+      sourceType,
+      sourceNote
+    } = req.body;
+
+    // Validation
+    if (!examName || !date || !startTime || !endTime || !locationOrHall) {
+      return res.status(400).json({ 
+        message: 'Missing required fields: examName, date, startTime, endTime, locationOrHall' 
+      });
+    }
+
+    // Validate date and time
+    const examDate = new Date(date);
+    const examStartTime = new Date(`${date}T${startTime}`);
+    const examEndTime = new Date(`${date}T${endTime}`);
+
+    if (examEndTime <= examStartTime) {
+      return res.status(400).json({ 
+        message: 'End time must be after start time' 
+      });
+    }
+
+    // Validate max seats
+    if (maxSeats && (maxSeats < 1 || maxSeats > 10)) {
+      return res.status(400).json({ 
+        message: 'Maximum seats must be between 1 and 10' 
+      });
+    }
+
+    const exam = await TheoryExam.findById(id);
+    if (!exam) {
+      return res.status(404).json({ message: 'Theory exam not found' });
+    }
+
+    // Update fields
+    if (examName) exam.examName = examName;
+    if (date) exam.date = examDate;
+    if (startTime) exam.startTime = startTime;
+    if (endTime) exam.endTime = endTime;
+    if (locationOrHall) exam.locationOrHall = locationOrHall;
+    if (language) exam.language = language;
+    if (maxSeats) exam.maxSeats = maxSeats;
+    if (sourceType) exam.sourceType = sourceType;
+    if (sourceNote) exam.sourceNote = sourceNote;
+
+    await exam.save();
+
+    res.status(200).json({
+      message: 'Theory exam updated successfully',
+      exam
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Delete theory exam
+// @route   DELETE /api/exams/theory/:id
+// @access Private (Admin only)
+const deleteTheoryExam = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const exam = await TheoryExam.findById(id);
+    if (!exam) {
+      return res.status(404).json({ message: 'Theory exam not found' });
+    }
+
+    // Check if exam has enrolled students
+    if (exam.enrolledStudents && exam.enrolledStudents.length > 0) {
+      return res.status(400).json({ 
+        message: 'Cannot delete exam with enrolled students' 
+      });
+    }
+
+    await TheoryExam.findByIdAndDelete(id);
+
+    res.status(200).json({
+      message: 'Theory exam deleted successfully'
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // @desc    Get all theory exams
 // @route   GET /api/exams/theory
 // @access Private (Admin, Instructor, Student)
@@ -301,53 +473,14 @@ const getUpcomingTheoryExams = async (req, res) => {
   }
 };
 
-// @desc    Import/seed theory exams (restricted endpoint)
-// @route   POST /api/exams/theory/import
-// @access Private (Admin only - for seeding/importing)
-const importTheoryExams = async (req, res) => {
-  try {
-    const { exams } = req.body;
-    
-    if (!Array.isArray(exams) || exams.length === 0) {
-      return res.status(400).json({ message: 'Invalid exam data' });
-    }
-
-    const createdExams = [];
-    const errors = [];
-
-    for (const examData of exams) {
-      try {
-        // Set default values for imported exams
-        const exam = new TheoryExam({
-          ...examData,
-          sourceType: 'imported',
-          importedAt: new Date(),
-          createdBy: req.user.id
-        });
-
-        await exam.save();
-        createdExams.push(exam);
-      } catch (error) {
-        errors.push({ exam: examData.examName, error: error.message });
-      }
-    }
-
-    res.status(201).json({
-      message: `Imported ${createdExams.length} exams successfully`,
-      createdExams,
-      errors
-    });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
 module.exports = {
   getTheoryExams,
   getTheoryExamById,
+  createTheoryExam,
+  updateTheoryExam,
+  deleteTheoryExam,
+  getUpcomingTheoryExams,
   getAssignableStudents,
   assignStudentToTheoryExam,
-  unassignStudentFromTheoryExam,
-  getUpcomingTheoryExams,
-  importTheoryExams
+  unassignStudentFromTheoryExam
 };

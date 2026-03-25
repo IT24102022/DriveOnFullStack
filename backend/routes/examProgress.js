@@ -9,13 +9,13 @@ const {
 const { protect, adminOnly } = require('../middleware/auth');
 
 // Admin and Instructor routes
-router.get('/progress/students', protect, adminOnly, getAllStudentProgress);
-router.get('/progress/stats', protect, adminOnly, getProgressStats);
+router.get('/students', protect, adminOnly, getAllStudentProgress);
+router.get('/stats', protect, adminOnly, getProgressStats);
 
 // Student progress (students can view their own)
-router.get('/progress/students/:studentId', protect, getStudentProgress);
+router.get('/students/:studentId', protect, getStudentProgress);
 
 // Progress update (system/admin only)
-router.post('/progress/students/:studentId/update', protect, adminOnly, updateStudentProgress);
+router.post('/students/:studentId/update', protect, adminOnly, updateStudentProgress);
 
 module.exports = router;

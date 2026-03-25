@@ -37,8 +37,12 @@ const practicalExamSchema = new mongoose.Schema({
   // External source tracking
   sourceType: {
     type: String,
-    enum: ['external', 'imported', 'seeded'],
-    default: 'seeded'
+    enum: ['manual', 'external', 'imported', 'seeded'],
+    default: 'manual'
+  },
+  sourceNote: {
+    type: String,
+    trim: true
   },
   externalReferenceId: {
     type: String,
@@ -49,7 +53,7 @@ const practicalExamSchema = new mongoose.Schema({
   },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Admin',
+    ref: 'User',  // Changed from 'Admin' to 'User'
     required: true
   },
   examiner: {

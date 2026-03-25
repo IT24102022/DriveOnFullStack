@@ -42,31 +42,48 @@ export default function ExamDashboardScreen({ navigation }) {
   });
   const [studentStatus, setStudentStatus] = useState(null);
 
+  // Defensive coding for user data
+  const safeUser = user || {};
+  const userName = safeUser.name || 'Admin';
+  const userRole = safeUser.role || 'admin';
+
   const loadData = useCallback(async () => {
     try {
-      if (user.role === 'admin' || user.role === 'instructor') {
-        const [theoryExamsData, practicalExamsData, statsData] = await Promise.all([
+      if (userRole === 'admin' || userRole === 'instructor') {
+        const [theoryExamsData, practicalExamsData] = await Promise.all([
           getUpcomingTheoryExams(),
-          getUpcomingPracticalExams(),
-          getProgressStats()
+          getUpcomingPracticalExams()
         ]);
         
         setUpcomingExams({
-          theory: theoryExamsData.data,
-          practical: practicalExamsData.data
+          theory: theoryExamsData.data || [],
+          practical: practicalExamsData.data || []
         });
-        setStats(statsData.data);
-      } else if (user.role === 'student') {
+
+        // Try to load stats with error handling
+        try {
+          const statsData = await getProgressStats();
+          setStats(statsData.data);
+        } catch (statsError) {
+          // Set default stats so dashboard doesn't fail completely
+          setStats({
+            statusDistribution: {},
+            theoryPassRate: 0,
+            practicalPassRate: 0,
+            totalStudents: 0
+          });
+        }
+      } else if (userRole === 'student') {
         const [theoryExamsData, practicalExamsData, progressData, resultsData] = await Promise.all([
           getUpcomingTheoryExams(),
           getUpcomingPracticalExams(),
-          getStudentProgress(user.studentId),
-          getStudentResults(user.studentId)
+          getStudentProgress(safeUser.studentId),
+          getStudentResults(safeUser.studentId)
         ]);
         
         setUpcomingExams({
-          theory: theoryExamsData.data,
-          practical: practicalExamsData.data
+          theory: theoryExamsData.data || [],
+          practical: practicalExamsData.data || []
         });
         setStudentStatus({
           progress: progressData.data,
@@ -74,13 +91,12 @@ export default function ExamDashboardScreen({ navigation }) {
         });
       }
     } catch (error) {
-      console.error('Dashboard load error:', error);
       Alert.alert('Error', 'Could not load dashboard data');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [user.role, user.studentId]);
+  }, [userRole, safeUser.studentId]);
 
   useEffect(() => {
     loadData();
@@ -216,22 +232,8 @@ export default function ExamDashboardScreen({ navigation }) {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Exam Dashboard</Text>
-          {user.role === 'admin' && (
-            <TouchableOpacity
-              style={styles.importBtn}
-              onPress={() => navigation.navigate('ExamImport')}
-            >
-              <Ionicons name="download-outline" size={20} color={COLORS.white} />
-              <Text style={styles.importBtnText}>Import</Text>
-            </TouchableOpacity>
-          )}
-        </View>
 
-        {/* Admin/Instructor Stats */}
-        {(user.role === 'admin' || user.role === 'instructor') && stats && (
+        {(userRole === 'admin' || userRole === 'instructor') && stats && (
           <View style={styles.statsSection}>
             <Text style={styles.sectionTitle}>Overview</Text>
             <View style={styles.statsGrid}>
@@ -264,7 +266,7 @@ export default function ExamDashboardScreen({ navigation }) {
         )}
 
         {/* Student Status */}
-        {user.role === 'student' && renderStudentStatus()}
+        {userRole === 'student' && renderStudentStatus()}
 
         {/* Upcoming Theory Exams */}
         <View style={styles.section}>
@@ -317,13 +319,15 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   container: { flex: 1 },
   header: {
+    backgroundColor: COLORS.gray,
+    paddingTop: 52,
+    paddingBottom: 16,
+    paddingHorizontal: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
   title: { fontSize: 24, fontWeight: '600', color: COLORS.black },
   importBtn: {
@@ -332,69 +336,64 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.brandOrange,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 8
+    borderRadius: 10
   },
-  importBtnText: { color: COLORS.white, fontWeight: '500', marginLeft: 4 },
-  statsSection: { padding: 20 },
-  sectionTitle: { fontSize: 18, fontWeight: '600', color: COLORS.black, marginBottom: 16 },
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  importBtnText: { color: COLORS.white, fontWeight: '600', marginLeft: 4, fontSize: 12 },
+  statsSection: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 12 },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: COLORS.black, marginBottom: 12 },
+  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   statCard: {
-    width: (width - 56) / 2,
-    backgroundColor: COLORS.white,
-    borderRadius: 12,
-    padding: 16,
-    borderLeftWidth: 4,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4
+    flex: 1,
+    minWidth: '45%',
+    maxWidth: '48%',
+    backgroundColor: COLORS.bgLight,
+    borderRadius: 14,
+    padding: 14,
+    alignItems: 'center',
+    gap: 4,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight
   },
-  statIcon: { marginBottom: 8 },
+  statIcon: { marginBottom: 4 },
   statContent: {},
-  statValue: { fontSize: 24, fontWeight: '700', color: COLORS.black },
-  statTitle: { fontSize: 12, color: COLORS.textMuted, marginTop: 4 },
-  statSubtitle: { fontSize: 10, color: COLORS.textMuted, marginTop: 2 },
-  section: { padding: 20 },
+  statValue: { fontSize: 22, fontWeight: '800', color: COLORS.black },
+  statTitle: { fontSize: 10, color: COLORS.textMuted, textAlign: 'center' },
+  statSubtitle: { fontSize: 9, color: COLORS.textMuted, marginTop: 1 },
+  section: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16 },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16
+    marginBottom: 12
   },
   viewAllBtn: {},
-  viewAllText: { color: COLORS.brandOrange, fontWeight: '500' },
+  viewAllText: { color: COLORS.brandOrange, fontWeight: '600', fontSize: 13 },
   examCard: {
     backgroundColor: COLORS.white,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 10,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4
+    borderColor: COLORS.border
   },
   examHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12
+    marginBottom: 8
   },
   examInfo: { flex: 1 },
-  examTitle: { fontSize: 16, fontWeight: '600', color: COLORS.black },
-  examDate: { fontSize: 12, color: COLORS.textMuted, marginTop: 4 },
+  examTitle: { fontSize: 14, fontWeight: '600', color: COLORS.black },
+  examDate: { fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
   seatBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 8
   },
-  seatBadgeText: { color: COLORS.white, fontSize: 12, fontWeight: '600' },
-  examDetails: { marginBottom: 12 },
-  examLocation: { fontSize: 14, color: COLORS.textMuted },
-  examLanguage: { fontSize: 12, color: COLORS.textMuted, marginTop: 4 },
+  seatBadgeText: { color: COLORS.white, fontSize: 10, fontWeight: '600' },
+  examDetails: { marginBottom: 8 },
+  examLocation: { fontSize: 12, color: COLORS.textMuted },
+  examLanguage: { fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
   examFooter: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -402,41 +401,41 @@ const styles = StyleSheet.create({
   },
   utilizationBar: {
     flex: 1,
-    height: 4,
+    height: 3,
     backgroundColor: COLORS.bgLight,
     borderRadius: 2,
-    marginRight: 12
+    marginRight: 8
   },
   utilizationFill: { height: '100%', borderRadius: 2 },
-  utilizationText: { fontSize: 12, color: COLORS.textMuted },
+  utilizationText: { fontSize: 10, color: COLORS.textMuted },
   studentStatusCard: {
     backgroundColor: COLORS.white,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: COLORS.border
   },
   statusRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 12
+    marginBottom: 10
   },
   statusItem: { flex: 1 },
-  statusLabel: { fontSize: 12, color: COLORS.textMuted },
-  statusValue: { fontSize: 14, fontWeight: '600', color: COLORS.black, marginTop: 4 },
+  statusLabel: { fontSize: 11, color: COLORS.textMuted },
+  statusValue: { fontSize: 12, fontWeight: '600', color: COLORS.black, marginTop: 2 },
   assignmentAlert: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFF8ED',
-    padding: 12,
+    padding: 8,
     borderRadius: 8,
-    marginTop: 8
+    marginTop: 6
   },
-  assignmentText: { fontSize: 14, color: COLORS.brandOrange, marginLeft: 8 },
+  assignmentText: { fontSize: 12, color: COLORS.brandOrange, marginLeft: 6 },
   emptyState: {
     alignItems: 'center',
-    paddingVertical: 32
+    paddingVertical: 24
   },
   emptyText: { fontSize: 14, color: COLORS.textMuted, marginTop: 8 }
 });

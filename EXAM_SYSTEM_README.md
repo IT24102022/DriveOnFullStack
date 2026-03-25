@@ -4,11 +4,10 @@ A comprehensive full-stack module for managing driving school exam schedules, st
 
 ## 🎯 Business Overview
 
-**Important Business Correction:**
-- **Admin DOES NOT create official exams**
-- Official driving-related exam schedules come from the Department of Motor Traffic (DMT) / external authority
-- Exams are treated as externally created upcoming exams that are imported, synced, or seeded
-- Admin can only VIEW upcoming exams and ASSIGN students to available exams
+**Important Business Logic:**
+- **Admin CREATES official exams** within the system
+- Exams are treated as manually created by Admin based on official announcements
+- External exam sources can still be imported for convenience but primary method is manual creation
 - **Maximum students per exam = 10**
 - Students can only check their assigned exam status
 - Instructors can view assigned student counts
@@ -30,22 +29,22 @@ A comprehensive full-stack module for managing driving school exam schedules, st
 ## 📋 Core Features
 
 ### 1. Exam Management
-- ✅ **View upcoming theory and practical exams**
+- ✅ **Create theory and practical exams** manually
 - ✅ **Role-based exam details display**
-- ✅ **Import/seed external exam data**
+- ✅ **Import external exam data** (optional feature)
 - ✅ **Search and filter exams**
 - ✅ **Real-time seat availability tracking**
 
 ### 2. Student Assignment
-- ✅ **Admin assigns students to exams (max 10 seats)**
+- ✅ **Admin assigns students to exams** (max 10 seats)
 - ✅ **Seat capacity enforcement with race condition protection**
-- ✅ **Eligibility validation (active account, not already assigned)**
+- ✅ **Eligibility validation** (active account, not already assigned)
 - ✅ **Unassign students before exam date**
 - ✅ **Bulk assignment support**
 
 ### 3. Progress Tracking
 - ✅ **Comprehensive student progress monitoring**
-- ✅ **Overall status tracking (Not Started → Completed)**
+- ✅ **Overall status tracking** (Not Started → Completed)
 - ✅ **Exam attempt history**
 - ✅ **Pass/fail statistics**
 - ✅ **Attendance analytics**
@@ -53,7 +52,7 @@ A comprehensive full-stack module for managing driving school exam schedules, st
 ### 4. Role-Based Access
 
 #### Admin Permissions:
-- View all upcoming exams
+- Create, view, edit, and delete exams
 - View exam details
 - Assign/unassign students to exams
 - View attendance reports
@@ -90,9 +89,9 @@ A comprehensive full-stack module for managing driving school exam schedules, st
   language: ['English', 'Sinhala', 'Tamil'],
   status: ['Scheduled', 'Completed', 'Cancelled'],
   maxSeats: { type: Number, default: 10 },
-  sourceType: ['external', 'imported', 'seeded'],
-  externalReferenceId: String,
-  createdBy: ObjectId,
+  sourceType: ['manual', 'external', 'imported', 'seeded'],
+  sourceNote: String,  // Admin notes about exam source
+  createdBy: ObjectId,  // Admin who created the exam
   enrolledStudents: [ObjectId],
   results: [ObjectId]
 }
@@ -108,6 +107,9 @@ A comprehensive full-stack module for managing driving school exam schedules, st
   vehicleCategory: ['Light', 'Heavy', 'Bike'],
   status: ['Scheduled', 'Completed', 'Cancelled'],
   maxSeats: { type: Number, default: 10 },
+  sourceType: ['manual', 'external', 'imported', 'seeded'],
+  sourceNote: String,  // Admin notes about exam source
+  createdBy: ObjectId,  // Admin who created the exam
   examiner: ObjectId,
   assignedVehicle: ObjectId,
   enrolledStudents: [ObjectId],
@@ -146,9 +148,16 @@ A comprehensive full-stack module for managing driving school exam schedules, st
 GET    /api/exams/theory              - Get all theory exams
 GET    /api/exams/theory/:id          - Get theory exam details
 GET    /api/exams/theory/upcoming     - Get upcoming theory exams
+POST   /api/exams/theory              - Create new theory exam
+PUT    /api/exams/theory/:id          - Update theory exam
+DELETE /api/exams/theory/:id          - Delete theory exam
+
 GET    /api/exams/practical           - Get all practical exams
 GET    /api/exams/practical/:id       - Get practical exam details
 GET    /api/exams/practical/upcoming  - Get upcoming practical exams
+POST   /api/exams/practical           - Create new practical exam
+PUT    /api/exams/practical/:id       - Update practical exam
+DELETE /api/exams/practical/:id       - Delete practical exam
 ```
 
 #### Student Assignment
@@ -252,14 +261,20 @@ npm start
 - Seat availability indicators
 - Real-time updates
 
-### 4. Exam Details
+### 4. Create/Edit Exam
+- Manual exam creation form
+- All exam fields (date, time, location, capacity)
+- Source tracking (manual vs imported)
+- Admin notes field for exam source
+
+### 5. Exam Details
 - Complete exam information
 - Enrolled students list
 - Seat availability visualization
 - Student assignment interface (Admin only)
 - Personal assignment status (Students)
 
-### 5. Progress Tracking
+### 6. Progress Tracking
 - Student progress overview
 - Exam attempt history
 - Attendance analytics
@@ -267,6 +282,12 @@ npm start
 - Role-based data access
 
 ## 🎯 Key Business Rules
+
+### Exam Creation
+- **Primary Method**: Manual creation by Admin
+- **Secondary Option**: Import external exam data
+- **Source Tracking**: `sourceType` field (manual/external/imported/seeded)
+- **Admin Notes**: `sourceNote` field for additional context
 
 ### Seat Management
 - **Maximum 10 students per exam**
@@ -278,9 +299,9 @@ npm start
 - **Admin can assign only if:**
   - Exam status is 'Scheduled'
   - Exam date is upcoming
-  - Seats are available (< 10)
   - Student account is active
   - Student not already assigned
+  - Seats are available (< 10)
 
 ### Progress Status Flow
 ```
@@ -306,11 +327,13 @@ Assigned for Practical Exam → Practical Passed → Completed
 - ✅ Suspended student account
 
 ### Test Scenarios:
-1. **Seat Capacity**: Try to assign 11th student
-2. **Race Conditions**: Simultaneous assignments
-3. **Role Access**: Test with different user roles
-4. **Progress Updates**: Automatic status changes
-5. **Attendance**: Record and analytics
+1. **Exam Creation**: Create manual exams with all fields
+2. **Seat Capacity**: Try to assign 11th student
+3. **Race Conditions**: Simultaneous assignments
+4. **Role Access**: Test with different user roles
+5. **Progress Updates**: Automatic status changes
+6. **Attendance**: Record and analytics
+7. **Source Tracking**: Verify manual vs imported exam handling
 
 ## 🔒 Security Features
 
@@ -319,7 +342,7 @@ Assigned for Practical Exam → Practical Passed → Completed
 - **Input validation and sanitization**
 - **MongoDB injection prevention**
 - **Rate limiting on sensitive endpoints**
-- **Audit trail for exam assignments
+- **Audit trail for exam assignments**
 
 ## 📊 Analytics & Reporting
 
@@ -340,15 +363,16 @@ Assigned for Practical Exam → Practical Passed → Completed
 
 ## 🔄 External Integration
 
-### Exam Import Options:
-1. **Manual Import**: Admin uploads exam data
-2. **API Integration**: Sync with DMT systems
-3. **Scheduled Import**: Automated data import
-4. **Seed Data**: Initial setup and testing
+### Exam Creation Options:
+1. **Manual Creation**: Primary method - Admin creates exams based on official announcements
+2. **Import External Data**: Secondary method - Import from external systems
+3. **Seed Data**: Initial setup and testing
+4. **API Integration**: Future - Sync with external systems
 
-### External Reference Tracking:
-- `sourceType`: external/imported/seeded
-- `externalReferenceId`: Original system ID
+### Source Tracking:
+- `sourceType`: manual/external/imported/seeded
+- `sourceNote`: Admin notes about exam source
+- `externalReferenceId`: Original system ID (for imported exams)
 - `importedAt`: Import timestamp
 
 ## 🚀 Deployment
@@ -357,7 +381,6 @@ Assigned for Practical Exam → Practical Passed → Completed
 ```bash
 # Production build
 npm run build
-
 # Start production server
 npm start
 ```
@@ -387,12 +410,12 @@ npx expo build:ios
 
 This module provides a complete, production-ready solution for managing driving school exam schedules with:
 
-- **✅ Full compliance** with business requirements
+- **✅ Manual exam creation** by Admin based on official announcements
+- **✅ Flexible import options** for external data
 - **✅ Robust seat management** (10 max per exam)
 - **✅ Role-based access control**
 - **✅ Real-time updates**
 - **✅ Comprehensive progress tracking**
-- **✅ External exam source support**
 - **✅ Modern, responsive UI**
 - **✅ Complete documentation**
 - **✅ Seed data for testing**

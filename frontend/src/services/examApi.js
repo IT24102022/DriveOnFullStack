@@ -3,24 +3,28 @@ import api from './api';
 // ── Theory Exams ────────────────────────────────────────────────────────────────
 export const getTheoryExams = (params) => api.get('/exams/theory', { params });
 export const getTheoryExamById = (id) => api.get(`/exams/theory/${id}`);
+export const createTheoryExam = (data) => api.post('/exams/theory', data);
+export const updateTheoryExam = (id, data) => api.put(`/exams/theory/${id}`, data);
+export const deleteTheoryExam = (id) => api.delete(`/exams/theory/${id}`);
 export const getUpcomingTheoryExams = () => api.get('/exams/theory/upcoming');
 export const getAssignableStudents = (examId) => api.get(`/exams/theory/${examId}/assignable-students`);
 export const assignStudentToTheoryExam = (examId, studentId) => 
   api.post(`/exams/theory/${examId}/assign-student`, { studentId });
 export const unassignStudentFromTheoryExam = (examId, studentId) => 
   api.post(`/exams/theory/${examId}/unassign-student`, { studentId });
-export const importTheoryExams = (exams) => api.post('/exams/theory/import', { exams });
 
 // ── Practical Exams ──────────────────────────────────────────────────────────────
 export const getPracticalExams = (params) => api.get('/exams/practical', { params });
 export const getPracticalExamById = (id) => api.get(`/exams/practical/${id}`);
+export const createPracticalExam = (data) => api.post('/exams/practical', data);
+export const updatePracticalExam = (id, data) => api.put(`/exams/practical/${id}`, data);
+export const deletePracticalExam = (id) => api.delete(`/exams/practical/${id}`);
 export const getUpcomingPracticalExams = () => api.get('/exams/practical/upcoming');
 export const getAssignablePracticalStudents = (examId) => api.get(`/exams/practical/${examId}/assignable-students`);
 export const assignStudentToPracticalExam = (examId, studentId) => 
   api.post(`/exams/practical/${examId}/assign-student`, { studentId });
 export const unassignStudentFromPracticalExam = (examId, studentId) => 
   api.post(`/exams/practical/${examId}/unassign-student`, { studentId });
-export const importPracticalExams = (exams) => api.post('/exams/practical/import', { exams });
 
 // ── Progress Tracking ─────────────────────────────────────────────────────────────
 export const getAllStudentProgress = (params) => api.get('/exam-progress/students', { params });

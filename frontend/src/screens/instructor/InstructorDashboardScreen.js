@@ -92,7 +92,7 @@ export default function InstructorDashboardScreen({ route, navigation }) {
         <View style={styles.profileCard}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>
-              {fullName?.split(' ').map(n => n[0]).join('').slice(0, 2)}
+              {(fullName || 'I').split(' ').map(n => n[0]).join('').slice(0, 2)}
             </Text>
           </View>
           <View style={styles.flex1}>

@@ -81,7 +81,7 @@ export default function HomeScreen({ navigation }) {
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Welcome */}
-        <Text style={styles.welcome}>Welcome, {user?.name?.split(' ')[0]}! 👋</Text>
+        <Text style={styles.welcome}>Welcome, {(user?.name || 'User').split(' ')[0]}! 👋</Text>
         <Text style={styles.subtitle}>Here's your driving progress overview.</Text>
 
         {/* Stats */}

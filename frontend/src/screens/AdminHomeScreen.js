@@ -74,7 +74,7 @@ export default function AdminHomeScreen({ navigation }) {
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.welcome}>Hello, {user?.name?.split(' ')[0] || 'Admin'} 👋</Text>
+        <Text style={styles.welcome}>Hello, {(user?.name || 'Admin').split(' ')[0]} 👋</Text>
         <Text style={styles.subtitle}>Here's your platform overview.</Text>
 
         {/* Stats */}

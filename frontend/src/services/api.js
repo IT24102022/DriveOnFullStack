@@ -6,7 +6,10 @@ export const BASE_URL = 'http://192.168.8.152:5000';
 // For local testing use: 'http://192.168.x.x:5000'  (your PC's local IP)
 // ─────────────────────────────────────────────────────────────────────────────
 
-const api = axios.create({ baseURL: `${BASE_URL}/api` });
+const api = axios.create({ 
+  baseURL: `${BASE_URL}/api`,
+  timeout: 10000 // Add timeout for better error handling
+});
 
 // Attach JWT token to every request automatically
 api.interceptors.request.use(async (config) => {
@@ -14,6 +17,12 @@ api.interceptors.request.use(async (config) => {
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
+
+// Handle response errors silently
+api.interceptors.response.use(
+  (response) => response,
+  (error) => Promise.reject(error)
+);
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 export const registerUser  = (data) => api.post('/auth/register', data);

@@ -132,15 +132,15 @@ export default function ExamDetailsScreen({ route, navigation }) {
     );
   };
 
-  const renderStudentCard = (student, isEnrolled = false) => {
+  const renderStudentCard = (student, isEnrolled = false, key) => {
     const canAssign = user.role === 'admin' && !isEnrolled && !exam.isFull && exam.status === 'Scheduled';
     
     return (
-      <View key={student.studentId} style={styles.studentCard}>
+      <View key={key || student.studentId} style={styles.studentCard}>
         <View style={styles.studentInfo}>
           <View style={styles.studentAvatar}>
             <Text style={styles.avatarText}>
-              {student.fullName.split(' ').map(n => n[0]).join('').toUpperCase()}
+              {(student.fullName || 'S').split(' ').map(n => n[0]).join('').toUpperCase()}
             </Text>
           </View>
           <View style={styles.studentDetails}>
@@ -230,7 +230,7 @@ export default function ExamDetailsScreen({ route, navigation }) {
                 <Text style={styles.sectionTitle}>
                   Available Students ({filteredAssignable.length})
                 </Text>
-                {filteredAssignable.map(student => renderStudentCard(student))}
+                {filteredAssignable.map(student => renderStudentCard(student, false, student.studentId))}
               </View>
             )}
 
@@ -239,7 +239,7 @@ export default function ExamDetailsScreen({ route, navigation }) {
                 <Text style={styles.sectionTitle}>
                   Not Available ({filteredNonAssignable.length})
                 </Text>
-                {filteredNonAssignable.map(student => renderStudentCard(student))}
+                {filteredNonAssignable.map(student => renderStudentCard(student, false, student.studentId))}
               </View>
             )}
           </ScrollView>
@@ -275,6 +275,7 @@ export default function ExamDetailsScreen({ route, navigation }) {
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <ScrollView
         style={styles.container}
+        contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -398,7 +399,7 @@ export default function ExamDetailsScreen({ route, navigation }) {
           </View>
           
           {exam.enrolledStudents?.length > 0 ? (
-            exam.enrolledStudents.map(student => renderStudentCard(student, true))
+            exam.enrolledStudents.map(student => renderStudentCard(student, true, student.studentId))
           ) : (
             <View style={styles.emptyStudents}>
               <Ionicons name="people-outline" size={48} color={COLORS.textMuted} />
@@ -422,6 +423,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.white },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   container: { flex: 1 },
+  content: { paddingHorizontal: 20, paddingBottom: 20 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -467,10 +469,10 @@ const styles = StyleSheet.create({
   examDetails: { marginBottom: 20 },
   detailRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 12
   },
-  detailText: { fontSize: 16, color: COLORS.textMuted, marginLeft: 12 },
+  detailText: { fontSize: 16, color: COLORS.textMuted, flex: 1, marginLeft: 12 },
   seatStatus: {
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
@@ -538,15 +540,16 @@ const styles = StyleSheet.create({
   instructorNote: { fontSize: 12, color: COLORS.textMuted },
   studentCard: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     backgroundColor: COLORS.white,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: COLORS.border
+    borderColor: COLORS.border,
+    minHeight: 80
   },
-  studentInfo: { flex: 1, flexDirection: 'row', alignItems: 'center' },
+  studentInfo: { flex: 1, flexDirection: 'column', alignItems: 'flex-start' },
   studentAvatar: {
     width: 40,
     height: 40,

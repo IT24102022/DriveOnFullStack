@@ -12,6 +12,19 @@ import { useAuth } from '../../../context/AuthContext';
 
 export default function PracticalExamListScreen({ navigation }) {
   const { user } = useAuth();
+  
+  // Authentication check - redirect to login if not authenticated or not admin
+  useEffect(() => {
+    if (!user) {
+      navigation.replace('Login');
+      return;
+    }
+    if (user.role !== 'admin') {
+      navigation.replace('Home'); // Redirect non-admin users
+      return;
+    }
+  }, [user, navigation]);
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [exams, setExams] = useState([]);
@@ -243,10 +256,20 @@ export default function PracticalExamListScreen({ navigation }) {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={COLORS.black} />
         </TouchableOpacity>
-        <Text style={styles.title}>Practical Exams</Text>
-        <TouchableOpacity onPress={() => setShowFilters(true)}>
-          <Ionicons name="options-outline" size={24} color={COLORS.black} />
-        </TouchableOpacity>
+        <Text style={styles.title}>Practical Exam Schedule</Text>
+        <View style={styles.headerActions}>
+          {user?.role === 'admin' && (
+            <TouchableOpacity 
+              style={styles.createBtn} 
+              onPress={() => navigation.navigate('CreateExam')}
+            >
+              <Ionicons name="add-circle-outline" size={20} color={COLORS.white} />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity onPress={() => setShowFilters(true)}>
+            <Ionicons name="options-outline" size={24} color={COLORS.black} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Search Bar */}
@@ -327,9 +350,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border
+    borderBottomColor: COLORS.border,
+    backgroundColor: COLORS.gray,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
-  title: { fontSize: 20, fontWeight: '600', color: COLORS.black },
+  title: { fontSize: 24, fontWeight: '600', color: COLORS.black },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12
+  },
+  createBtn: {
+    backgroundColor: COLORS.brandOrange,
+    borderRadius: 20,
+    padding: 8,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
   searchSection: { padding: 20, paddingBottom: 16 },
   searchBar: {
     flexDirection: 'row',
@@ -387,7 +425,13 @@ const styles = StyleSheet.create({
     marginBottom: 12
   },
   examInfo: { flex: 1 },
-  examTitle: { fontSize: 16, fontWeight: '600', color: COLORS.black },
+  examTitle: { 
+    fontSize: 16, 
+    fontWeight: '600', 
+    color: COLORS.black,
+    flex: 1,
+    flexWrap: 'wrap'
+  },
   examDate: { fontSize: 12, color: COLORS.textMuted, marginTop: 4 },
   examBadges: {
     flexDirection: 'column',
@@ -412,7 +456,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 6
   },
-  examDetailText: { fontSize: 14, color: COLORS.textMuted, marginLeft: 8 },
+  examDetailText: { 
+    fontSize: 14, 
+    color: COLORS.textMuted, 
+    marginLeft: 8,
+    flex: 1,
+    flexWrap: 'wrap'
+  },
   examFooter: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -8,22 +8,28 @@ import { COLORS } from '../theme';
 
 import LoginScreen          from '../screens/auth/LoginScreen';
 import AdminHomeScreen      from '../screens/AdminHomeScreen';
-import StudentHomeScreen    from '../screens/StudentHomeScreen';
-import InstructorHomeScreen from '../screens/InstructorHomeScreen';
-import SessionsScreen       from '../screens/sessions/SessionsScreen';
+import InstructorHomeScreen     from '../screens/InstructorHomeScreen';
+import InstructorDashboardScreen from '../screens/instructor/InstructorDashboardScreen';
+import InstructorNotificationsScreen from '../screens/instructor/InstructorNotificationsScreen';
+import InstructorExamsScreen     from '../screens/instructor/InstructorExamsScreen';
+import InstructorExamDetailsScreen from '../screens/instructor/InstructorExamDetailsScreen';
 import LearningScreen       from '../screens/learning/LearningScreen';
 import QuizScreen           from '../screens/learning/QuizScreen';
 import PaymentsScreen       from '../screens/payments/PaymentsScreen';
 import AddPaymentScreen     from '../screens/payments/AddPaymentScreen';
 import AccountScreen        from '../screens/AccountScreen';
+import StudentHomeScreen    from '../screens/StudentHomeScreen';
+import SessionsScreen       from '../screens/sessions/SessionsScreen';
 import BookSessionScreen    from '../screens/sessions/BookSessionScreen';
 
 import StudentListScreen     from '../screens/admin/StudentListScreen';
+import InstructorListScreen from '../screens/admin/InstructorListScreen';
 import AddEditStudentScreen  from '../screens/admin/AddEditStudentScreen';
 import MonthlyReportScreen   from '../screens/admin/MonthlyReportScreen';
 import StudentDashboard      from '../screens/student/StudentDashboardScreen';
-
-import InstructorListScreen    from '../screens/admin/InstructorListScreen';
+import StudentLearningScreen   from '../screens/student/learning/StudentLearningScreen';
+import StudentExamsScreen     from '../screens/student/StudentExamsScreen';
+import StudentExamDetailsScreen from '../screens/student/StudentExamDetailsScreen';
 import AddEditInstructorScreen from '../screens/admin/AddEditInstructorScreen';
 import VehicleListScreen       from '../screens/admin/VehicleListScreen';
 import VehicleDetailScreen     from '../screens/admin/VehicleDetailScreen';
@@ -39,6 +45,9 @@ import TheoryExamListScreen     from '../screens/admin/exam/TheoryExamListScreen
 import PracticalExamListScreen  from '../screens/admin/exam/PracticalExamListScreen';
 import ExamDetailsScreen        from '../screens/admin/exam/ExamDetailsScreen';
 import ProgressTrackingScreen   from '../screens/admin/exam/ProgressTrackingScreen';
+import CreateTheoryExamScreen   from '../screens/admin/exam/CreateTheoryExamScreen';
+import CreatePracticalExamScreen from '../screens/admin/exam/CreatePracticalExamScreen';
+import CreateExamScreen        from '../screens/admin/exam/CreateExamScreen';
 
 import AdminSessionListScreen from '../screens/admin/AdminSessionListScreen';
 import AddEditSessionScreen   from '../screens/admin/AddEditSessionScreen';
@@ -52,7 +61,6 @@ import StudentProgressScreen     from '../screens/admin/StudentProgressScreen';
 import AvailableSessionsScreen   from '../screens/student/AvailableSessionsScreen';
 
 import LearningCatalogScreen from '../screens/student/learning/LearningCatalogScreen';
-import StudentLearningScreen from '../screens/student/learning/StudentLearningScreen';
 import LessonDetailScreen from '../screens/student/learning/LessonDetailScreen';
 import ResourceDetailScreen from '../screens/student/learning/ResourceDetailScreen';
 import LessonScreen          from '../screens/student/learning/LessonScreen';
@@ -185,6 +193,8 @@ export default function AppNavigator() {
         <Stack.Screen name="PracticalExamList"  component={PracticalExamListScreen} />
         <Stack.Screen name="ExamDetails"        component={ExamDetailsScreen} />
         <Stack.Screen name="ProgressTracking"   component={ProgressTrackingScreen} />
+        <Stack.Screen name="CreateTheoryExam"   component={CreateTheoryExamScreen} />
+        <Stack.Screen name="CreateExam"        component={CreateExamScreen} />
       </Stack.Navigator>
     );
   }
@@ -203,6 +213,8 @@ export default function AppNavigator() {
         <Stack.Screen name="AddPayment"  component={AddPaymentScreen} />
         <Stack.Screen name="BookSession" component={BookSessionScreen} />
         <Stack.Screen name="AvailableSessions" component={AvailableSessionsScreen} />
+        <Stack.Screen name="StudentExams" component={StudentExamsScreen} />
+        <Stack.Screen name="StudentExamDetails" component={StudentExamDetailsScreen} />
       </Stack.Navigator>
     );
   }
@@ -211,6 +223,8 @@ export default function AppNavigator() {
     return (
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="InstructorMain" component={InstructorTabs} />
+        <Stack.Screen name="InstructorExams" component={InstructorExamsScreen} />
+        <Stack.Screen name="InstructorExamDetails" component={InstructorExamDetailsScreen} />
       </Stack.Navigator>
     );
   }

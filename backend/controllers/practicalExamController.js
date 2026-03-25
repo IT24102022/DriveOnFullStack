@@ -331,6 +331,182 @@ const getUpcomingPracticalExams = async (req, res) => {
   }
 };
 
+// @desc    Create new practical exam
+// @route   POST /api/exams/practical
+// @access Private (Admin only)
+const createPracticalExam = async (req, res) => {
+  try {
+    const {
+      date,
+      startTime,
+      endTime,
+      trialLocation,
+      vehicleCategory,
+      maxSeats,
+      sourceType = 'manual',
+      sourceNote,
+      examiner,
+      assignedVehicle
+    } = req.body;
+
+    // Validation
+    if (!date || !startTime || !endTime || !trialLocation || !vehicleCategory) {
+      return res.status(400).json({ 
+        message: 'Missing required fields: date, startTime, endTime, trialLocation, vehicleCategory' 
+      });
+    }
+
+    // Validate date and time
+    const examDate = new Date(date);
+    const examStartTime = new Date(`${date}T${startTime}`);
+    const examEndTime = new Date(`${date}T${endTime}`);
+
+    if (examEndTime <= examStartTime) {
+      return res.status(400).json({ 
+        message: 'End time must be after start time' 
+      });
+    }
+
+    if (examDate < new Date().setHours(0, 0, 0, 0)) {
+      return res.status(400).json({ 
+        message: 'Exam date cannot be in the past' 
+      });
+    }
+
+    // Validate max seats
+    if (maxSeats && (maxSeats < 1 || maxSeats > 10)) {
+      return res.status(400).json({ 
+        message: 'Maximum seats must be between 1 and 10' 
+      });
+    }
+
+    // Create exam
+    const exam = new PracticalExam({
+      date: examDate,
+      startTime,
+      endTime,
+      trialLocation,
+      vehicleCategory,
+      maxSeats: maxSeats || 10,
+      sourceType,
+      sourceNote,
+      examiner,
+      assignedVehicle,
+      createdBy: req.user.id
+    });
+
+    await exam.save();
+
+    res.status(201).json({
+      message: 'Practical exam created successfully',
+      exam
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Update practical exam
+// @route   PUT /api/exams/practical/:id
+// @access Private (Admin only)
+const updatePracticalExam = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      date,
+      startTime,
+      endTime,
+      trialLocation,
+      vehicleCategory,
+      maxSeats,
+      sourceType,
+      sourceNote,
+      examiner,
+      assignedVehicle
+    } = req.body;
+
+    // Validation
+    if (!date || !startTime || !endTime || !trialLocation || !vehicleCategory) {
+      return res.status(400).json({ 
+        message: 'Missing required fields: date, startTime, endTime, trialLocation, vehicleCategory' 
+      });
+    }
+
+    // Validate date and time
+    const examDate = new Date(date);
+    const examStartTime = new Date(`${date}T${startTime}`);
+    const examEndTime = new Date(`${date}T${endTime}`);
+
+    if (examEndTime <= examStartTime) {
+      return res.status(400).json({ 
+        message: 'End time must be after start time' 
+      });
+    }
+
+    // Validate max seats
+    if (maxSeats && (maxSeats < 1 || maxSeats > 10)) {
+      return res.status(400).json({ 
+        message: 'Maximum seats must be between 1 and 10' 
+      });
+    }
+
+    const exam = await PracticalExam.findById(id);
+    if (!exam) {
+      return res.status(404).json({ message: 'Practical exam not found' });
+    }
+
+    // Update fields
+    if (date) exam.date = examDate;
+    if (startTime) exam.startTime = startTime;
+    if (endTime) exam.endTime = endTime;
+    if (trialLocation) exam.trialLocation = trialLocation;
+    if (vehicleCategory) exam.vehicleCategory = vehicleCategory;
+    if (maxSeats) exam.maxSeats = maxSeats;
+    if (sourceType) exam.sourceType = sourceType;
+    if (sourceNote) exam.sourceNote = sourceNote;
+    if (examiner) exam.examiner = examiner;
+    if (assignedVehicle) exam.assignedVehicle = assignedVehicle;
+
+    await exam.save();
+
+    res.status(200).json({
+      message: 'Practical exam updated successfully',
+      exam
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Delete practical exam
+// @route   DELETE /api/exams/practical/:id
+// @access Private (Admin only)
+const deletePracticalExam = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const exam = await PracticalExam.findById(id);
+    if (!exam) {
+      return res.status(404).json({ message: 'Practical exam not found' });
+    }
+
+    // Check if exam has enrolled students
+    if (exam.enrolledStudents && exam.enrolledStudents.length > 0) {
+      return res.status(400).json({ 
+        message: 'Cannot delete exam with enrolled students' 
+      });
+    }
+
+    await PracticalExam.findByIdAndDelete(id);
+
+    res.status(200).json({
+      message: 'Practical exam deleted successfully'
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // @desc    Import/seed practical exams (restricted endpoint)
 // @route   POST /api/exams/practical/import
 // @access Private (Admin only - for seeding/importing)
@@ -375,9 +551,11 @@ const importPracticalExams = async (req, res) => {
 module.exports = {
   getPracticalExams,
   getPracticalExamById,
+  createPracticalExam,
+  updatePracticalExam,
+  deletePracticalExam,
+  getUpcomingPracticalExams,
   getAssignableStudents,
   assignStudentToPracticalExam,
-  unassignStudentFromPracticalExam,
-  getUpcomingPracticalExams,
-  importPracticalExams
+  unassignStudentFromPracticalExam
 };
