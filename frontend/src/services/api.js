@@ -76,4 +76,25 @@ export const getProgress        = ()       => api.get('/progress');
 export const submitProgress     = (data)   => api.post('/progress', data);
 export const getProgressByQuiz  = (quizId) => api.get(`/progress/quiz/${quizId}`);
 
+// ── Staff Management ────────────────────────────────────────────────────────────
+export const getStaff          = (params) => api.get('/staff', { params });
+export const getStaffById      = (id)      => api.get(`/staff/${id}`);
+export const createStaff       = (data)   => api.post('/staff', data);
+export const updateStaff       = (id, data) => api.put(`/staff/${id}`, data);
+export const deleteStaff       = (id)      => api.delete(`/staff/${id}`);
+export const staffLogin        = (data)   => api.post('/staff/login', data);
+
+// ── Staff Attendance ───────────────────────────────────────────────────────────
+export const getStaffAttendance      = (params) => api.get('/staff/attendance', { params });
+export const markStaffAttendance     = (data)   => api.post('/staff/attendance', data);
+export const getStaffPerformance     = (params) => api.get('/staff/performance', { params });
+
+// ── Notifications ───────────────────────────────────────────────────────────────
+export const getNotifications      = (params) => api.get('/notifications', { params });
+export const sendNotification       = (data)   => api.post('/notifications', data);
+export const markNotificationRead   = (id)      => api.patch(`/notifications/${id}/read`);
+export const markAllNotificationsRead = ()     => api.patch('/notifications/read-all');
+export const deleteNotification     = (id)      => api.delete(`/notifications/${id}`);
+export const getNotificationStats   = ()       => api.get('/notifications/stats');
+
 export default api;

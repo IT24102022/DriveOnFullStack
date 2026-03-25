@@ -47,7 +47,9 @@ import ExamDetailsScreen        from '../screens/admin/exam/ExamDetailsScreen';
 import ProgressTrackingScreen   from '../screens/admin/exam/ProgressTrackingScreen';
 import CreateTheoryExamScreen   from '../screens/admin/exam/CreateTheoryExamScreen';
 import CreatePracticalExamScreen from '../screens/admin/exam/CreatePracticalExamScreen';
-import CreateExamScreen        from '../screens/admin/exam/CreateExamScreen';
+import CreateExamScreen         from '../screens/admin/exam/CreateExamScreen';
+import EditTheoryExamScreen     from '../screens/admin/exam/EditTheoryExamScreen';
+import EditPracticalExamScreen  from '../screens/admin/exam/EditPracticalExamScreen';
 
 import AdminSessionListScreen from '../screens/admin/AdminSessionListScreen';
 import AddEditSessionScreen   from '../screens/admin/AddEditSessionScreen';
@@ -74,6 +76,15 @@ import AdminQuizBuilderScreen   from '../screens/admin/learning/AdminQuizBuilder
 import AdminQuizAnalyticsScreen from '../screens/admin/learning/AdminQuizAnalyticsScreen';
 import CreateLearningContentScreen from '../screens/admin/learning/CreateLearningContentScreen';
 
+// Staff Management Imports
+import StaffListScreen from '../screens/admin/staff/StaffListScreen';
+import CreateStaffScreen from '../screens/admin/staff/CreateStaffScreen';
+import EditStaffScreen from '../screens/admin/staff/EditStaffScreen';
+import StaffAttendanceScreen from '../screens/admin/staff/StaffAttendanceScreen';
+import StaffLoginScreen from '../screens/staff/StaffLoginScreen';
+import StaffHomeScreen from '../screens/staff/StaffHomeScreen';
+import StaffNotificationsScreen from '../screens/staff/StaffNotificationsScreen';
+
 const Tab   = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
@@ -98,13 +109,12 @@ function TabBar({ icons, iconsActive, state, navigation }) {
 function AdminTabs() {
   return (
     <Tab.Navigator
-      tabBar={(props) => <TabBar icons={['home-outline','people-outline','calendar-outline','card-outline','person-outline']} iconsActive={['home','people','calendar','card','person']} {...props} />}
+      tabBar={(props) => <TabBar icons={['home-outline','people-outline','calendar-outline','person-outline']} iconsActive={['home','people','calendar','person']} {...props} />}
       screenOptions={{ headerShown: false }}
     >
       <Tab.Screen name="Home"     component={AdminHomeScreen} />
       <Tab.Screen name="Students" component={StudentListScreen} />
       <Tab.Screen name="Sessions" component={AdminSessionListScreen} />
-      <Tab.Screen name="Payments" component={PaymentsScreen} />
       <Tab.Screen name="Account"  component={AccountScreen} />
     </Tab.Navigator>
   );
@@ -193,8 +203,17 @@ export default function AppNavigator() {
         <Stack.Screen name="PracticalExamList"  component={PracticalExamListScreen} />
         <Stack.Screen name="ExamDetails"        component={ExamDetailsScreen} />
         <Stack.Screen name="ProgressTracking"   component={ProgressTrackingScreen} />
-        <Stack.Screen name="CreateTheoryExam"   component={CreateTheoryExamScreen} />
-        <Stack.Screen name="CreateExam"        component={CreateExamScreen} />
+        <Stack.Screen name="CreateTheoryExam"    component={CreateTheoryExamScreen} />
+        <Stack.Screen name="CreatePracticalExam" component={CreatePracticalExamScreen} />
+        <Stack.Screen name="CreateExam"         component={CreateExamScreen} />
+        <Stack.Screen name="EditTheoryExam"     component={EditTheoryExamScreen} />
+        <Stack.Screen name="EditPracticalExam"  component={EditPracticalExamScreen} />
+        
+        {/* Staff Management Routes */}
+        <Stack.Screen name="StaffList"         component={StaffListScreen} />
+        <Stack.Screen name="CreateStaff"       component={CreateStaffScreen} />
+        <Stack.Screen name="EditStaff"         component={EditStaffScreen} />
+        <Stack.Screen name="StaffAttendance"   component={StaffAttendanceScreen} />
       </Stack.Navigator>
     );
   }
@@ -229,9 +248,20 @@ export default function AppNavigator() {
     );
   }
 
+  if (user.role === 'staff') {
+    return (
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="StaffMain" component={StaffHomeScreen} />
+        <Stack.Screen name="StaffNotifications" component={StaffNotificationsScreen} />
+        <Stack.Screen name="StaffAttendance" component={StaffAttendanceScreen} />
+      </Stack.Navigator>
+    );
+  }
+
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="StaffLogin" component={StaffLoginScreen} />
     </Stack.Navigator>
   );
 }

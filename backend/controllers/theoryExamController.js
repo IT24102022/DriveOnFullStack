@@ -254,8 +254,12 @@ const getAssignableStudents = async (req, res) => {
       return res.status(404).json({ message: 'Theory exam not found' });
     }
 
-    // Check if exam is still assignable
-    if (exam.status !== 'Scheduled' || exam.date <= new Date()) {
+    // Check if exam is still assignable (compare date only, not time)
+    const examDate = new Date(exam.date);
+    examDate.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (exam.status !== 'Scheduled' || examDate < today) {
       return res.status(400).json({ message: 'Exam is not available for assignment' });
     }
 
@@ -264,7 +268,7 @@ const getAssignableStudents = async (req, res) => {
       return res.status(400).json({ message: 'Exam is already full' });
     }
 
-    const allStudents = await Student.find({ accountStatus: 'active' })
+    const allStudents = await Student.find({ accountStatus: 'Active' })
       .populate('enrolledCourses');
 
     const assignableStudents = [];
@@ -340,7 +344,11 @@ const assignStudentToTheoryExam = async (req, res) => {
       return res.status(400).json({ message: 'Cannot assign to completed or cancelled exam' });
     }
 
-    if (exam.date <= new Date()) {
+    const examDateAssign = new Date(exam.date);
+    examDateAssign.setHours(0, 0, 0, 0);
+    const todayAssign = new Date();
+    todayAssign.setHours(0, 0, 0, 0);
+    if (examDateAssign < todayAssign) {
       return res.status(400).json({ message: 'Cannot assign to past exam' });
     }
 
@@ -358,7 +366,7 @@ const assignStudentToTheoryExam = async (req, res) => {
       return res.status(404).json({ message: 'Student not found' });
     }
 
-    if (student.accountStatus !== 'active') {
+    if (student.accountStatus !== 'Active') {
       return res.status(400).json({ message: 'Student account is not active' });
     }
 
@@ -380,14 +388,12 @@ const assignStudentToTheoryExam = async (req, res) => {
     }
 
     // Update student progress
-    await StudentProgress.findOneAndUpdate(
+    const progressResult = await StudentProgress.findOneAndUpdate(
       { student: studentId },
-      { 
-        overallStatus: 'Assigned for Theory Exam',
-        lastUpdated: new Date()
-      },
-      { upsert: true }
+      { $set: { overallStatus: 'Assigned for Theory Exam', lastUpdated: new Date() } },
+      { upsert: true, new: true }
     );
+    console.log('[Progress] upsert result for student', studentId, ':', progressResult?._id, progressResult?.overallStatus);
 
     res.json({
       message: 'Student assigned successfully',
@@ -411,8 +417,12 @@ const unassignStudentFromTheoryExam = async (req, res) => {
       return res.status(404).json({ message: 'Theory exam not found' });
     }
 
-    // Allow unassignment only if exam is in the future
-    if (exam.date <= new Date()) {
+    // Allow unassignment only if exam is today or in the future (date-only comparison)
+    const examDate = new Date(exam.date);
+    examDate.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (examDate < today) {
       return res.status(400).json({ message: 'Cannot unassign from past or ongoing exam' });
     }
 

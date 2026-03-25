@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, StyleSheet,
   TouchableOpacity, ActivityIndicator, Alert,
@@ -15,6 +15,7 @@ import {
   getStudentResults
 } from '../../../services/examApi';
 import { useAuth } from '../../../context/AuthContext';
+import { useFocusEffect } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
 
@@ -98,9 +99,11 @@ export default function ExamDashboardScreen({ navigation }) {
     }
   }, [userRole, safeUser.studentId]);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData])
+  );
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -226,6 +229,23 @@ export default function ExamDashboardScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={24} color={COLORS.black} />
+        </TouchableOpacity>
+        <Text style={styles.title}>Exam Schedule</Text>
+        {userRole === 'admin' ? (
+          <TouchableOpacity
+            style={styles.createBtn}
+            onPress={() => navigation.navigate('CreateExam')}
+          >
+            <Ionicons name="add-circle-outline" size={22} color={COLORS.white} />
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 24 }} />
+        )}
+      </View>
+
       <ScrollView
         style={styles.container}
         refreshControl={
@@ -309,6 +329,21 @@ export default function ExamDashboardScreen({ navigation }) {
             </View>
           )}
         </View>
+
+        {/* Progress Tracking — admin only */}
+        {userRole === 'admin' && (
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={styles.progressTrackingBtn}
+              onPress={() => navigation.navigate('ProgressTracking')}
+            >
+              <Ionicons name="bar-chart-outline" size={24} color={COLORS.white} />
+              <Text style={styles.progressTrackingText}>View Progress Tracking</Text>
+              <Ionicons name="chevron-forward" size={20} color={COLORS.white} />
+            </TouchableOpacity>
+          </View>
+        )}
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -329,7 +364,14 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
   },
-  title: { fontSize: 24, fontWeight: '600', color: COLORS.black },
+  title: { fontSize: 18, fontWeight: '700', color: COLORS.black, flex: 1, textAlign: 'center' },
+  createBtn: {
+    backgroundColor: COLORS.brandOrange,
+    borderRadius: 20,
+    padding: 8,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
   importBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -360,6 +402,20 @@ const styles = StyleSheet.create({
   statTitle: { fontSize: 10, color: COLORS.textMuted, textAlign: 'center' },
   statSubtitle: { fontSize: 9, color: COLORS.textMuted, marginTop: 1 },
   section: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16 },
+  progressTrackingBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.brandOrange,
+    borderRadius: 14,
+    padding: 16,
+    gap: 12
+  },
+  progressTrackingText: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.white
+  },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',

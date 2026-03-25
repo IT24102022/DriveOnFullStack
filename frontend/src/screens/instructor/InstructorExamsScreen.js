@@ -156,7 +156,7 @@ export default function InstructorExamsScreen({ navigation }) {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safe} edges={['bottom']}>
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <View style={styles.center}>
           <ActivityIndicator size="large" color={COLORS.brandOrange} />
         </View>
@@ -230,14 +230,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    paddingTop: 52,
+    paddingBottom: 16,
     backgroundColor: COLORS.gray,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
   },
-  title: { fontSize: 24, fontWeight: '600', color: COLORS.black },
+  title: { fontSize: 18, fontWeight: '700', color: COLORS.black, flex: 1, textAlign: 'center' },
   placeholder: { width: 24 },
   container: { flex: 1, backgroundColor: COLORS.bgLight },
   countsCard: {

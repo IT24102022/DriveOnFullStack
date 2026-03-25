@@ -32,16 +32,19 @@ export default function ProgressTrackingScreen({ navigation }) {
         const response = await getStudentProgress(user.studentId);
         setStudentDetails(response.data);
       } else {
-        const [studentsResponse, statsResponse] = await Promise.all([
-          getAllStudentProgress(),
-          getProgressStats()
-        ]);
-        
-        setStudents(studentsResponse.data.progress);
-        setStats(statsResponse.data);
+        const studentsResponse = await getAllStudentProgress();
+        console.log('[Progress] API response:', JSON.stringify(studentsResponse.data));
+        setStudents(studentsResponse.data.progress || []);
+        try {
+          const statsResponse = await getProgressStats();
+          setStats(statsResponse.data);
+        } catch (statsError) {
+          console.warn('Stats load failed:', statsError.response?.data?.message || statsError.message);
+        }
       }
     } catch (error) {
-      Alert.alert('Error', 'Could not load progress data');
+      console.error('[Progress] Load error:', error.response?.data || error.message);
+      Alert.alert('Error', error.response?.data?.message || error.message || 'Could not load progress data');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -171,9 +174,7 @@ export default function ProgressTrackingScreen({ navigation }) {
   );
 
   const renderStudentDetails = () => {
-    if (!studentDetails) return null;
-
-    const { progress, theoryResults, practicalResults, attendanceStats } = studentDetails;
+    const progress = selectedStudent;
 
     return (
       <ScrollView style={styles.detailsContainer}>
@@ -202,59 +203,47 @@ export default function ProgressTrackingScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Exam History */}
+        {/* Exam Progress */}
         <View style={styles.detailsCard}>
-          <Text style={styles.detailsTitle}>Exam History</Text>
+          <Text style={styles.detailsTitle}>Exam Progress</Text>
           
           <View style={styles.examHistorySection}>
-            <Text style={styles.examHistoryTitle}>Theory Exams</Text>
-            {theoryResults.length > 0 ? (
-              theoryResults.map((result, index) => (
-                <View key={index} style={styles.examResultItem}>
-                  <View style={styles.examResultHeader}>
-                    <Text style={styles.examResultName}>{result.theoryExam?.examName}</Text>
-                    <View style={[
-                      styles.resultBadge,
-                      { backgroundColor: result.status === 'Pass' ? COLORS.green : COLORS.red }
-                    ]}>
-                      <Text style={styles.resultBadgeText}>{result.status}</Text>
-                    </View>
-                  </View>
-                  <Text style={styles.examResultDate}>
-                    {new Date(result.recordedDate).toLocaleDateString()}
-                  </Text>
-                  <Text style={styles.examResultAttempt}>Attempt #{result.attemptNumber}</Text>
-                </View>
-              ))
-            ) : (
-              <Text style={styles.noResultsText}>No theory exam attempts</Text>
+            <Text style={styles.examHistoryTitle}>Theory Exam</Text>
+            <View style={styles.detailsRow}>
+              <Text style={styles.detailsLabel}>Status</Text>
+              <Text style={styles.detailsValue}>{progress.theoryExamStatus || 'Not Attempted'}</Text>
+            </View>
+            <View style={styles.detailsRow}>
+              <Text style={styles.detailsLabel}>Attempts</Text>
+              <Text style={styles.detailsValue}>{progress.theoryExamAttempts || 0}</Text>
+            </View>
+            {progress.lastTheoryExamDate && (
+              <View style={styles.detailsRow}>
+                <Text style={styles.detailsLabel}>Last Attempt</Text>
+                <Text style={styles.detailsValue}>
+                  {new Date(progress.lastTheoryExamDate).toLocaleDateString()}
+                </Text>
+              </View>
             )}
           </View>
 
           <View style={styles.examHistorySection}>
-            <Text style={styles.examHistoryTitle}>Practical Exams</Text>
-            {practicalResults.length > 0 ? (
-              practicalResults.map((result, index) => (
-                <View key={index} style={styles.examResultItem}>
-                  <View style={styles.examResultHeader}>
-                    <Text style={styles.examResultName}>
-                      {result.practicalExam?.vehicleCategory} Practical
-                    </Text>
-                    <View style={[
-                      styles.resultBadge,
-                      { backgroundColor: result.status === 'Pass' ? COLORS.green : COLORS.red }
-                    ]}>
-                      <Text style={styles.resultBadgeText}>{result.status}</Text>
-                    </View>
-                  </View>
-                  <Text style={styles.examResultDate}>
-                    {new Date(result.recordedDate).toLocaleDateString()}
-                  </Text>
-                  <Text style={styles.examResultAttempt}>Attempt #{result.attemptNumber}</Text>
-                </View>
-              ))
-            ) : (
-              <Text style={styles.noResultsText}>No practical exam attempts</Text>
+            <Text style={styles.examHistoryTitle}>Practical Exam</Text>
+            <View style={styles.detailsRow}>
+              <Text style={styles.detailsLabel}>Status</Text>
+              <Text style={styles.detailsValue}>{progress.practicalExamStatus || 'Not Attempted'}</Text>
+            </View>
+            <View style={styles.detailsRow}>
+              <Text style={styles.detailsLabel}>Attempts</Text>
+              <Text style={styles.detailsValue}>{progress.practicalExamAttempts || 0}</Text>
+            </View>
+            {progress.lastPracticalExamDate && (
+              <View style={styles.detailsRow}>
+                <Text style={styles.detailsLabel}>Last Attempt</Text>
+                <Text style={styles.detailsValue}>
+                  {new Date(progress.lastPracticalExamDate).toLocaleDateString()}
+                </Text>
+              </View>
             )}
           </View>
         </View>
@@ -267,14 +256,14 @@ export default function ProgressTrackingScreen({ navigation }) {
             <View style={styles.attendanceSummaryItem}>
               <Text style={styles.attendanceSummaryLabel}>Theory Sessions</Text>
               <Text style={styles.attendanceSummaryValue}>
-                {attendanceStats.theory.presentSessions}/{attendanceStats.theory.totalSessions}
+                {progress.totalTheoryHours || 0} hours
               </Text>
               <Text style={styles.attendanceSummaryRate}>
-                {attendanceStats.theory.attendanceRate}% attendance
+                {progress.theoryAttendanceRate || 0}% attendance rate
               </Text>
               {renderProgressBar(
-                attendanceStats.theory.presentSessions,
-                attendanceStats.theory.totalSessions,
+                progress.theoryAttendanceRate || 0,
+                100,
                 COLORS.brandOrange
               )}
             </View>
@@ -282,14 +271,14 @@ export default function ProgressTrackingScreen({ navigation }) {
             <View style={styles.attendanceSummaryItem}>
               <Text style={styles.attendanceSummaryLabel}>Practical Sessions</Text>
               <Text style={styles.attendanceSummaryValue}>
-                {attendanceStats.practical.presentSessions}/{attendanceStats.practical.totalSessions}
+                {progress.totalPracticalHours || 0} hours
               </Text>
               <Text style={styles.attendanceSummaryRate}>
-                {attendanceStats.practical.attendanceRate}% attendance
+                {progress.practicalAttendanceRate || 0}% attendance rate
               </Text>
               {renderProgressBar(
-                attendanceStats.practical.presentSessions,
-                attendanceStats.practical.totalSessions,
+                progress.practicalAttendanceRate || 0,
+                100,
                 COLORS.blue
               )}
             </View>
@@ -434,11 +423,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border
+    paddingTop: 52,
+    paddingBottom: 16,
+    backgroundColor: COLORS.gray,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
-  title: { fontSize: 20, fontWeight: '600', color: COLORS.black },
+  title: { fontSize: 18, fontWeight: '700', color: COLORS.black, flex: 1, textAlign: 'center' },
   statsSection: { padding: 20 },
   sectionTitle: { fontSize: 18, fontWeight: '600', color: COLORS.black, marginBottom: 16 },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },

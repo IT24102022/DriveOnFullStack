@@ -11,6 +11,8 @@ const mongoose = require('mongoose');
 // @access Private (Admin, Instructor)
 const getAllStudentProgress = async (req, res) => {
   try {
+    const rawCount = await StudentProgress.countDocuments({});
+    console.log('[Progress] RAW total in DB (no filter):', rawCount);
     const { status, page = 1, limit = 20, search } = req.query;
     
     // Build filter
@@ -37,13 +39,13 @@ const getAllStudentProgress = async (req, res) => {
           path: 'student',
           select: 'firstName lastName email contactNo accountStatus'
         })
-        .populate('enrolledCourses', 'courseFee licenseCategory')
         .sort({ lastUpdated: -1 })
         .skip(skip)
         .limit(parseInt(limit)),
       StudentProgress.countDocuments(filter)
     ]);
 
+    console.log('[Progress] total records:', total, '| returned:', progress.length);
     res.json({
       progress,
       pagination: {
@@ -54,6 +56,7 @@ const getAllStudentProgress = async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('[Progress] getAllStudentProgress error:', error.message);
     res.status(500).json({ message: error.message });
   }
 };
@@ -74,9 +77,7 @@ const getStudentProgress = async (req, res) => {
       .populate({
         path: 'student',
         select: 'firstName lastName email contactNo address city dateOfBirth accountStatus'
-      })
-      .populate('enrolledCourses', 'courseFee licenseCategory discount remainingBalance')
-      .populate('completedCourses', 'courseFee licenseCategory');
+      });
 
     if (!progress) {
       // Create progress record if it doesn't exist

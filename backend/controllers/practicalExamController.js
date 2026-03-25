@@ -86,8 +86,12 @@ const getAssignableStudents = async (req, res) => {
       return res.status(404).json({ message: 'Practical exam not found' });
     }
 
-    // Check if exam is still assignable
-    if (exam.status !== 'Scheduled' || exam.date <= new Date()) {
+    // Check if exam is still assignable (compare date only, not time)
+    const examDate = new Date(exam.date);
+    examDate.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (exam.status !== 'Scheduled' || examDate < today) {
       return res.status(400).json({ message: 'Exam is not available for assignment' });
     }
 
@@ -96,7 +100,7 @@ const getAssignableStudents = async (req, res) => {
       return res.status(400).json({ message: 'Exam is already full' });
     }
 
-    const allStudents = await Student.find({ accountStatus: 'active' })
+    const allStudents = await Student.find({ accountStatus: 'Active' })
       .populate('enrolledCourses');
 
     const assignableStudents = [];
@@ -191,7 +195,11 @@ const assignStudentToPracticalExam = async (req, res) => {
       return res.status(400).json({ message: 'Cannot assign to completed or cancelled exam' });
     }
 
-    if (exam.date <= new Date()) {
+    const examDateAssign = new Date(exam.date);
+    examDateAssign.setHours(0, 0, 0, 0);
+    const todayAssign = new Date();
+    todayAssign.setHours(0, 0, 0, 0);
+    if (examDateAssign < todayAssign) {
       return res.status(400).json({ message: 'Cannot assign to past exam' });
     }
 
@@ -209,7 +217,7 @@ const assignStudentToPracticalExam = async (req, res) => {
       return res.status(404).json({ message: 'Student not found' });
     }
 
-    if (student.accountStatus !== 'active') {
+    if (student.accountStatus !== 'Active') {
       return res.status(400).json({ message: 'Student account is not active' });
     }
 
@@ -239,10 +247,8 @@ const assignStudentToPracticalExam = async (req, res) => {
     // Update student progress
     await StudentProgress.findOneAndUpdate(
       { student: studentId },
-      { 
-        overallStatus: 'Assigned for Practical Exam',
-        lastUpdated: new Date()
-      }
+      { $set: { overallStatus: 'Assigned for Practical Exam', lastUpdated: new Date() } },
+      { upsert: true, new: true }
     );
 
     res.json({
@@ -267,8 +273,12 @@ const unassignStudentFromPracticalExam = async (req, res) => {
       return res.status(404).json({ message: 'Practical exam not found' });
     }
 
-    // Allow unassignment only if exam is in the future
-    if (exam.date <= new Date()) {
+    // Allow unassignment only if exam is today or in the future (date-only comparison)
+    const examDate = new Date(exam.date);
+    examDate.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (examDate < today) {
       return res.status(400).json({ message: 'Cannot unassign from past or ongoing exam' });
     }
 

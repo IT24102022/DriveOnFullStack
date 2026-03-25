@@ -11,6 +11,7 @@ import {
   getTheoryExamById,
   getPracticalExamById,
   getAssignableStudents,
+  getAssignablePracticalStudents,
   assignStudentToTheoryExam,
   unassignStudentFromTheoryExam,
   assignStudentToPracticalExam,
@@ -56,7 +57,7 @@ export default function ExamDetailsScreen({ route, navigation }) {
       setAssignableStudents(response.data.assignableStudents);
       setNonAssignableStudents(response.data.nonAssignableStudents);
     } catch (error) {
-      Alert.alert('Error', 'Could not load assignable students');
+      Alert.alert('Error', error.response?.data?.message || 'Could not load assignable students');
     }
   }, [examType, examId]);
 
@@ -124,7 +125,7 @@ export default function ExamDetailsScreen({ route, navigation }) {
               Alert.alert('Success', 'Student unassigned successfully');
               loadData(); // Refresh exam data
             } catch (error) {
-              Alert.alert('Error', 'Could not unassign student');
+              Alert.alert('Error', error.response?.data?.message || 'Could not unassign student');
             }
           }
         }
@@ -136,7 +137,7 @@ export default function ExamDetailsScreen({ route, navigation }) {
     const canAssign = user.role === 'admin' && !isEnrolled && !exam.isFull && exam.status === 'Scheduled';
     
     return (
-      <View key={key || student.studentId} style={styles.studentCard}>
+      <View key={String(key || student._id || student.studentId)} style={styles.studentCard}>
         <View style={styles.studentInfo}>
           <View style={styles.studentAvatar}>
             <Text style={styles.avatarText}>
@@ -170,7 +171,7 @@ export default function ExamDetailsScreen({ route, navigation }) {
         {isEnrolled && user.role === 'admin' && (
           <TouchableOpacity
             style={styles.unassignBtn}
-            onPress={() => handleUnassignStudent(student.studentId)}
+            onPress={() => handleUnassignStudent(student._id || student.studentId)}
           >
             <Ionicons name="remove-circle-outline" size={20} color={COLORS.red} />
           </TouchableOpacity>
@@ -230,7 +231,7 @@ export default function ExamDetailsScreen({ route, navigation }) {
                 <Text style={styles.sectionTitle}>
                   Available Students ({filteredAssignable.length})
                 </Text>
-                {filteredAssignable.map(student => renderStudentCard(student, false, student.studentId))}
+                {filteredAssignable.map(student => renderStudentCard(student, false, student._id || student.studentId))}
               </View>
             )}
 
@@ -239,7 +240,7 @@ export default function ExamDetailsScreen({ route, navigation }) {
                 <Text style={styles.sectionTitle}>
                   Not Available ({filteredNonAssignable.length})
                 </Text>
-                {filteredNonAssignable.map(student => renderStudentCard(student, false, student.studentId))}
+                {filteredNonAssignable.map(student => renderStudentCard(student, false, student._id || student.studentId))}
               </View>
             )}
           </ScrollView>
@@ -273,6 +274,21 @@ export default function ExamDetailsScreen({ route, navigation }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
+      {/* Header - fixed outside ScrollView */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={24} color={COLORS.black} />
+        </TouchableOpacity>
+        <Text style={styles.title}>Exam Details</Text>
+        {user.role === 'admin' ? (
+          <TouchableOpacity onPress={openAssignModal}>
+            <Ionicons name="person-add-outline" size={24} color={COLORS.brandOrange} />
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 24 }} />
+        )}
+      </View>
+
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.content}
@@ -280,18 +296,6 @@ export default function ExamDetailsScreen({ route, navigation }) {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={24} color={COLORS.black} />
-          </TouchableOpacity>
-          <Text style={styles.title}>Exam Details</Text>
-          {user.role === 'admin' && (
-            <TouchableOpacity onPress={openAssignModal}>
-              <Ionicons name="person-add-outline" size={24} color={COLORS.brandOrange} />
-            </TouchableOpacity>
-          )}
-        </View>
 
         {/* Exam Info */}
         <View style={styles.examInfoCard}>
@@ -399,7 +403,7 @@ export default function ExamDetailsScreen({ route, navigation }) {
           </View>
           
           {exam.enrolledStudents?.length > 0 ? (
-            exam.enrolledStudents.map(student => renderStudentCard(student, true, student.studentId))
+            exam.enrolledStudents.map(student => renderStudentCard(student, true, student._id || student.studentId))
           ) : (
             <View style={styles.emptyStudents}>
               <Ionicons name="people-outline" size={48} color={COLORS.textMuted} />
@@ -429,11 +433,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border
+    paddingTop: 52,
+    paddingBottom: 16,
+    backgroundColor: COLORS.gray,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
-  title: { fontSize: 20, fontWeight: '600', color: COLORS.black },
+  title: { fontSize: 18, fontWeight: '700', color: COLORS.black, flex: 1, textAlign: 'center' },
   examInfoCard: {
     margin: 20,
     backgroundColor: COLORS.white,

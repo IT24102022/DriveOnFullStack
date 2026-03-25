@@ -31,6 +31,8 @@ app.use('/api/license-categories', require('./routes/licenseCategories'));
 app.use('/api/vehicle-classes',    require('./routes/vehicleClasses'));
 app.use('/api/enrollment',         require('./routes/enrollment'));
 app.use('/api/owners', require('./routes/feedbacks'));
+app.use('/api/staff',              require('./routes/staff'));
+app.use('/api/notifications',      require('./routes/notifications'));
 
 // Exam System Routes
 app.use('/api/exams', require('./routes/examSystem'));

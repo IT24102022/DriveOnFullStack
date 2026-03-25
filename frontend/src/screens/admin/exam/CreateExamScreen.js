@@ -3,8 +3,9 @@ import {
   View,
   Text,
   TouchableOpacity,
-  SafeAreaView
+  StyleSheet
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { COLORS } from '../../../theme';
 
@@ -56,21 +57,20 @@ const CreateExamScreen = ({ navigation }) => {
   );
 };
 
-const styles = {
+const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.white },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    paddingTop: 52,
+    paddingBottom: 16,
     backgroundColor: COLORS.gray,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
   },
-  title: { fontSize: 24, fontWeight: '600', color: COLORS.black },
+  title: { fontSize: 18, fontWeight: '700', color: COLORS.black, flex: 1, textAlign: 'center' },
   placeholder: { width: 24 },
   container: {
     flex: 1,
@@ -118,6 +118,6 @@ const styles = {
   arrowIcon: {
     marginLeft: 16
   }
-};
+});
 
 export default CreateExamScreen;

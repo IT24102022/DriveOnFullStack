@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View, Text, ScrollView, StyleSheet,
   TouchableOpacity, ActivityIndicator, Alert,
@@ -7,7 +8,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../../theme';
-import { getTheoryExams } from '../../../services/examApi';
+import { getTheoryExams, deleteTheoryExam } from '../../../services/examApi';
 import { useAuth } from '../../../context/AuthContext';
 
 export default function TheoryExamListScreen({ navigation }) {
@@ -51,9 +52,11 @@ export default function TheoryExamListScreen({ navigation }) {
     }
   }, [filterStatus, filterLanguage]);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData])
+  );
 
   useEffect(() => {
     // Apply search filter
@@ -157,6 +160,29 @@ export default function TheoryExamListScreen({ navigation }) {
     </Modal>
   );
 
+  const handleDelete = (exam) => {
+    Alert.alert(
+      'Delete Exam',
+      `Are you sure you want to delete "${exam.examName}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteTheoryExam(exam._id);
+              setExams(prev => prev.filter(e => e._id !== exam._id));
+              setFilteredExams(prev => prev.filter(e => e._id !== exam._id));
+            } catch (error) {
+              Alert.alert('Error', error.response?.data?.message || 'Failed to delete exam');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const renderExamCard = (exam) => {
     const seatsUsed = exam.enrolledStudents?.length || 0;
     const seatsAvailable = exam.maxSeats - seatsUsed;
@@ -182,11 +208,10 @@ export default function TheoryExamListScreen({ navigation }) {
     };
 
     return (
-      <TouchableOpacity
-        key={exam._id}
-        style={styles.examCard}
-        onPress={() => navigation.navigate('ExamDetails', { examType: 'theory', examId: exam._id })}
-      >
+      <View key={exam._id} style={styles.examCard}>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('ExamDetails', { examType: 'theory', examId: exam._id })}
+        >
         <View style={styles.examHeader}>
           <View style={styles.examInfo}>
             <Text style={styles.examTitle}>{exam.examName}</Text>
@@ -236,7 +261,26 @@ export default function TheoryExamListScreen({ navigation }) {
           </View>
           <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
         </View>
-      </TouchableOpacity>
+        </TouchableOpacity>
+        {user?.role === 'admin' && (
+          <View style={styles.cardActions}>
+            <TouchableOpacity
+              style={styles.editBtn}
+              onPress={() => navigation.navigate('EditTheoryExam', { exam })}
+            >
+              <Ionicons name="pencil-outline" size={16} color={COLORS.white} />
+              <Text style={styles.actionBtnText}>Edit</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.deleteBtn}
+              onPress={() => handleDelete(exam)}
+            >
+              <Ionicons name="trash-outline" size={16} color={COLORS.white} />
+              <Text style={styles.actionBtnText}>Delete</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
     );
   };
 
@@ -316,6 +360,7 @@ export default function TheoryExamListScreen({ navigation }) {
 
       <ScrollView
         style={styles.container}
+        contentContainerStyle={styles.listContent}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -348,14 +393,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    paddingTop: 52,
+    paddingBottom: 16,
     backgroundColor: COLORS.gray,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
   },
-  title: { fontSize: 24, fontWeight: '600', color: COLORS.black },
+  title: { fontSize: 18, fontWeight: '700', color: COLORS.black, flex: 1, textAlign: 'center' },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -404,6 +448,7 @@ const styles = StyleSheet.create({
     marginRight: 6
   },
   container: { flex: 1 },
+  listContent: { paddingTop: 8, paddingBottom: 32 },
   examCard: {
     backgroundColor: COLORS.white,
     marginHorizontal: 20,
@@ -477,6 +522,37 @@ const styles = StyleSheet.create({
   },
   utilizationFill: { height: '100%', borderRadius: 2 },
   utilizationText: { fontSize: 12, color: COLORS.textMuted },
+  cardActions: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingBottom: 12
+  },
+  editBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.blue,
+    borderRadius: 8,
+    paddingVertical: 8,
+    gap: 6
+  },
+  deleteBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.red,
+    borderRadius: 8,
+    paddingVertical: 8,
+    gap: 6
+  },
+  actionBtnText: {
+    color: COLORS.white,
+    fontSize: 13,
+    fontWeight: '600'
+  },
   emptyState: {
     alignItems: 'center',
     paddingVertical: 64,
