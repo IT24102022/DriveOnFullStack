@@ -51,6 +51,7 @@ export default function AdminHomeScreen({ navigation }) {
     { icon: 'school-outline',      label: 'Learning',    screen: 'CreateLearningContent',    color: COLORS.blueBg    },
     { icon: 'card-outline',        label: 'Payments',    screen: 'Payments',       color: COLORS.greenBg   },
     { icon: 'bar-chart-outline', label: 'Attendance', screen: 'AttendanceAnalytics', color: COLORS.brandYellow },
+    { icon: 'clipboard-outline',   label: 'Exam Schedule', screen: 'ExamDashboard', color: COLORS.purpleBg   },
   ];
 
   if (loading) return <View style={styles.center}><ActivityIndicator size="large" color={COLORS.brandOrange} /></View>;

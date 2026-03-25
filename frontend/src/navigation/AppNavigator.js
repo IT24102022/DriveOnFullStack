@@ -33,6 +33,13 @@ import OwnersListScreen       from '../screens/admin/OwnersListScreen';
 import VehicleUsageReportScreen from '../screens/admin/VehicleUsageReportScreen';
 import ExpiryAlertsScreen    from '../screens/admin/ExpiryAlertsScreen';
 
+// Exam System Imports
+import ExamDashboardScreen      from '../screens/admin/exam/ExamDashboardScreen';
+import TheoryExamListScreen     from '../screens/admin/exam/TheoryExamListScreen';
+import PracticalExamListScreen  from '../screens/admin/exam/PracticalExamListScreen';
+import ExamDetailsScreen        from '../screens/admin/exam/ExamDetailsScreen';
+import ProgressTrackingScreen   from '../screens/admin/exam/ProgressTrackingScreen';
+
 import AdminSessionListScreen from '../screens/admin/AdminSessionListScreen';
 import AddEditSessionScreen   from '../screens/admin/AddEditSessionScreen';
 import SessionReportScreen    from '../screens/admin/SessionReportScreen';
@@ -171,6 +178,13 @@ export default function AppNavigator() {
         <Stack.Screen name="AdminQuizBuilder"      component={AdminQuizBuilderScreen} />
         <Stack.Screen name="AdminQuizAnalytics"    component={AdminQuizAnalyticsScreen} />
         <Stack.Screen name="CreateLearningContent" component={CreateLearningContentScreen} />
+        
+        {/* Exam System Routes */}
+        <Stack.Screen name="ExamDashboard"      component={ExamDashboardScreen} />
+        <Stack.Screen name="TheoryExamList"     component={TheoryExamListScreen} />
+        <Stack.Screen name="PracticalExamList"  component={PracticalExamListScreen} />
+        <Stack.Screen name="ExamDetails"        component={ExamDetailsScreen} />
+        <Stack.Screen name="ProgressTracking"   component={ProgressTrackingScreen} />
       </Stack.Navigator>
     );
   }

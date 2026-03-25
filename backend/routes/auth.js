@@ -4,8 +4,13 @@ const { register, login, getProfile, updateProfile } = require('../controllers/a
 const { protect } = require('../middleware/auth');
 
 router.post('/register', register);
-router.post('/login',    login);
-router.get('/profile',   protect, getProfile);
-router.put('/profile',   protect, updateProfile);
+router.post('/login', login);  // Keep this as is for now
+router.get('/profile', protect, getProfile);
+router.put('/profile', protect, updateProfile);
+
+// Test route for debugging
+router.get('/test', (req, res) => {
+  res.json({ message: 'Auth routes are working', timestamp: new Date() });
+});
 
 module.exports = router;

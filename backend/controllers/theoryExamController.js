@@ -1,0 +1,353 @@
+const TheoryExam = require('../models/TheoryExam');
+const Student = require('../models/Student');
+const StudentProgress = require('../models/StudentProgress');
+const ExamResult = require('../models/ExamResult');
+const mongoose = require('mongoose');
+
+// @desc    Get all theory exams
+// @route   GET /api/exams/theory
+// @access Private (Admin, Instructor, Student)
+const getTheoryExams = async (req, res) => {
+  try {
+    const { status, dateFrom, dateTo, language, upcoming } = req.query;
+    
+    // Build filter
+    const filter = {};
+    if (status) filter.status = status;
+    if (language) filter.language = language;
+    if (upcoming === 'true') {
+      filter.date = { $gte: new Date() };
+      filter.status = 'Scheduled';
+    }
+    if (dateFrom || dateTo) {
+      filter.date = {};
+      if (dateFrom) filter.date.$gte = new Date(dateFrom);
+      if (dateTo) filter.date.$lte = new Date(dateTo);
+    }
+
+    const exams = await TheoryExam.find(filter)
+      .populate('createdBy', 'name email')
+      .populate('enrolledStudents', 'firstName lastName email contactNo')
+      .sort({ date: 1, startTime: 1 });
+
+    // Add seat availability info
+    const examsWithSeats = exams.map(exam => ({
+      ...exam.toObject(),
+      seatsUsed: exam.enrolledStudents.length,
+      seatsAvailable: exam.maxSeats - exam.enrolledStudents.length,
+      isFull: exam.enrolledStudents.length >= exam.maxSeats
+    }));
+
+    res.json(examsWithSeats);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get theory exam by ID
+// @route   GET /api/exams/theory/:id
+// @access Private (Admin, Instructor, Student)
+const getTheoryExamById = async (req, res) => {
+  try {
+    const exam = await TheoryExam.findById(req.params.id)
+      .populate('createdBy', 'name email')
+      .populate('enrolledStudents', 'firstName lastName email contactNo accountStatus')
+      .populate('results');
+
+    if (!exam) {
+      return res.status(404).json({ message: 'Theory exam not found' });
+    }
+
+    // Add seat availability info
+    const examWithSeats = {
+      ...exam.toObject(),
+      seatsUsed: exam.enrolledStudents.length,
+      seatsAvailable: exam.maxSeats - exam.enrolledStudents.length,
+      isFull: exam.enrolledStudents.length >= exam.maxSeats
+    };
+
+    res.json(examWithSeats);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get assignable students for a theory exam
+// @route   GET /api/exams/theory/:id/assignable-students
+// @access Private (Admin only)
+const getAssignableStudents = async (req, res) => {
+  try {
+    const exam = await TheoryExam.findById(req.params.id);
+    if (!exam) {
+      return res.status(404).json({ message: 'Theory exam not found' });
+    }
+
+    // Check if exam is still assignable
+    if (exam.status !== 'Scheduled' || exam.date <= new Date()) {
+      return res.status(400).json({ message: 'Exam is not available for assignment' });
+    }
+
+    // Check if exam is full
+    if (exam.enrolledStudents.length >= exam.maxSeats) {
+      return res.status(400).json({ message: 'Exam is already full' });
+    }
+
+    const allStudents = await Student.find({ accountStatus: 'active' })
+      .populate('enrolledCourses');
+
+    const assignableStudents = [];
+    const nonAssignableStudents = [];
+
+    for (const student of allStudents) {
+      const isAlreadyAssigned = exam.enrolledStudents.includes(student._id);
+      const seatsRemaining = exam.maxSeats - exam.enrolledStudents.length;
+      
+      let reasons = [];
+      let isAssignable = true;
+
+      if (isAlreadyAssigned) {
+        isAssignable = false;
+        reasons.push('Already assigned to this exam');
+      }
+
+      if (seatsRemaining <= 0) {
+        isAssignable = false;
+        reasons.push('No seats available');
+      }
+
+      // Optional eligibility checks
+      const studentProgress = await StudentProgress.findOne({ student: student._id });
+      if (studentProgress && studentProgress.theoryExamStatus === 'Passed') {
+        isAssignable = false;
+        reasons.push('Theory exam already passed');
+      }
+
+      const studentData = {
+        studentId: student._id,
+        fullName: `${student.firstName} ${student.lastName}`,
+        email: student.email,
+        contactNo: student.contactNo,
+        isAssignable,
+        reasons,
+        alreadyAssigned: isAlreadyAssigned,
+        accountStatus: student.accountStatus,
+        seatsRemaining
+      };
+
+      if (isAssignable) {
+        assignableStudents.push(studentData);
+      } else {
+        nonAssignableStudents.push(studentData);
+      }
+    }
+
+    res.json({
+      assignableStudents,
+      nonAssignableStudents,
+      seatsRemaining: exam.maxSeats - exam.enrolledStudents.length
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Assign student to theory exam
+// @route   POST /api/exams/theory/:id/assign-student
+// @access Private (Admin only)
+const assignStudentToTheoryExam = async (req, res) => {
+  try {
+    const { studentId } = req.body;
+    const exam = await TheoryExam.findById(req.params.id);
+
+    if (!exam) {
+      return res.status(404).json({ message: 'Theory exam not found' });
+    }
+
+    // Validation checks
+    if (exam.status !== 'Scheduled') {
+      return res.status(400).json({ message: 'Cannot assign to completed or cancelled exam' });
+    }
+
+    if (exam.date <= new Date()) {
+      return res.status(400).json({ message: 'Cannot assign to past exam' });
+    }
+
+    if (exam.enrolledStudents.length >= exam.maxSeats) {
+      return res.status(400).json({ message: 'Exam is already full' });
+    }
+
+    if (exam.enrolledStudents.includes(studentId)) {
+      return res.status(400).json({ message: 'Student already assigned to this exam' });
+    }
+
+    // Verify student exists and is active
+    const student = await Student.findById(studentId);
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+
+    if (student.accountStatus !== 'active') {
+      return res.status(400).json({ message: 'Student account is not active' });
+    }
+
+    // Use findOneAndUpdate to prevent race conditions
+    const updatedExam = await TheoryExam.findOneAndUpdate(
+      { 
+        _id: req.params.id,
+        enrolledStudents: { $nin: [studentId] }
+      },
+      { 
+        $push: { enrolledStudents: studentId },
+        $inc: { __v: 1 }
+      },
+      { new: true }
+    ).populate('enrolledStudents', 'firstName lastName email');
+
+    if (!updatedExam) {
+      return res.status(400).json({ message: 'Assignment failed. Exam may be full or student already assigned.' });
+    }
+
+    // Update student progress
+    await StudentProgress.findOneAndUpdate(
+      { student: studentId },
+      { 
+        overallStatus: 'Assigned for Theory Exam',
+        lastUpdated: new Date()
+      },
+      { upsert: true }
+    );
+
+    res.json({
+      message: 'Student assigned successfully',
+      exam: updatedExam,
+      seatsRemaining: updatedExam.maxSeats - updatedExam.enrolledStudents.length
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Unassign student from theory exam
+// @route   POST /api/exams/theory/:id/unassign-student
+// @access Private (Admin only)
+const unassignStudentFromTheoryExam = async (req, res) => {
+  try {
+    const { studentId } = req.body;
+    const exam = await TheoryExam.findById(req.params.id);
+
+    if (!exam) {
+      return res.status(404).json({ message: 'Theory exam not found' });
+    }
+
+    // Allow unassignment only if exam is in the future
+    if (exam.date <= new Date()) {
+      return res.status(400).json({ message: 'Cannot unassign from past or ongoing exam' });
+    }
+
+    if (!exam.enrolledStudents.includes(studentId)) {
+      return res.status(400).json({ message: 'Student is not assigned to this exam' });
+    }
+
+    // Update exam
+    const updatedExam = await TheoryExam.findByIdAndUpdate(
+      req.params.id,
+      { $pull: { enrolledStudents: studentId } },
+      { new: true }
+    ).populate('enrolledStudents', 'firstName lastName email');
+
+    // Update student progress
+    await StudentProgress.findOneAndUpdate(
+      { student: studentId },
+      { 
+        overallStatus: 'In Progress',
+        lastUpdated: new Date()
+      }
+    );
+
+    res.json({
+      message: 'Student unassigned successfully',
+      exam: updatedExam,
+      seatsRemaining: updatedExam.maxSeats - updatedExam.enrolledStudents.length
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get upcoming theory exams (for dashboard)
+// @route   GET /api/exams/theory/upcoming
+// @access Private
+const getUpcomingTheoryExams = async (req, res) => {
+  try {
+    const exams = await TheoryExam.find({
+      date: { $gte: new Date() },
+      status: 'Scheduled'
+    })
+    .populate('createdBy', 'name')
+    .populate('enrolledStudents', 'firstName lastName')
+    .sort({ date: 1, startTime: 1 })
+    .limit(10);
+
+    const examsWithStats = exams.map(exam => ({
+      ...exam.toObject(),
+      seatsUsed: exam.enrolledStudents.length,
+      seatsAvailable: exam.maxSeats - exam.enrolledStudents.length,
+      utilizationRate: Math.round((exam.enrolledStudents.length / exam.maxSeats) * 100)
+    }));
+
+    res.json(examsWithStats);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Import/seed theory exams (restricted endpoint)
+// @route   POST /api/exams/theory/import
+// @access Private (Admin only - for seeding/importing)
+const importTheoryExams = async (req, res) => {
+  try {
+    const { exams } = req.body;
+    
+    if (!Array.isArray(exams) || exams.length === 0) {
+      return res.status(400).json({ message: 'Invalid exam data' });
+    }
+
+    const createdExams = [];
+    const errors = [];
+
+    for (const examData of exams) {
+      try {
+        // Set default values for imported exams
+        const exam = new TheoryExam({
+          ...examData,
+          sourceType: 'imported',
+          importedAt: new Date(),
+          createdBy: req.user.id
+        });
+
+        await exam.save();
+        createdExams.push(exam);
+      } catch (error) {
+        errors.push({ exam: examData.examName, error: error.message });
+      }
+    }
+
+    res.status(201).json({
+      message: `Imported ${createdExams.length} exams successfully`,
+      createdExams,
+      errors
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = {
+  getTheoryExams,
+  getTheoryExamById,
+  getAssignableStudents,
+  assignStudentToTheoryExam,
+  unassignStudentFromTheoryExam,
+  getUpcomingTheoryExams,
+  importTheoryExams
+};

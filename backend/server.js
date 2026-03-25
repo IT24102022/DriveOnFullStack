@@ -10,7 +10,10 @@ connectDB();
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:19006', 'http://192.168.8.152:19006', 'exp://192.168.8.152:8081'],
+  credentials: true
+}));
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
@@ -21,14 +24,23 @@ app.use('/api/instructors', require('./routes/instructors'));
 app.use('/api/vehicles',    require('./routes/vehicles'));
 app.use('/api/payments',    require('./routes/payments'));
 app.use('/api/quizzes',     require('./routes/quizzes'));
-app.use('/api/progress',    require('./routes/progress'));
 app.use('/api/learning',    require('./routes/learning'));
 app.use('/api/students',           require('./routes/students'));
 app.use('/api/license-categories', require('./routes/licenseCategories'));
 app.use('/api/vehicle-classes',    require('./routes/vehicleClasses'));
 app.use('/api/enrollment',         require('./routes/enrollment'));
-app.use('/api/owners', require('./routes/owners'));
-app.use('/api/feedbacks', require('./routes/feedbacks'));
+app.use('/api/owners', require('./routes/feedbacks'));
+
+// Exam System Routes
+app.use('/api/exams', require('./routes/examSystem'));
+app.use('/api/exam-progress', require('./routes/examProgress'));
+app.use('/api/exam-attendance', require('./routes/examAttendance'));
+app.use('/api/exam-results', require('./routes/examResults'));
+
+// Test route for debugging
+app.get('/api/test', (req, res) => {
+  res.json({ message: 'API is working', timestamp: new Date() });
+});
 
 // Health check
 app.get('/', (req, res) => {
@@ -42,4 +54,8 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
+  console.log(`Local: http://localhost:${PORT}`);
+  console.log(`Network: http://192.168.8.152:${PORT}`);
+});
