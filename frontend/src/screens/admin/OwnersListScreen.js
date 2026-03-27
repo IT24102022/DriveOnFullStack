@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet,
-  TextInput, ActivityIndicator, Alert, RefreshControl,
+  TextInput, ActivityIndicator, Alert, RefreshControl, Modal, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { getAllOwners, deleteOwner } from '../../services/instructorVehicleApi';
+import { getAllOwners, deleteOwner } from '../../services/ownerApi';
 import { COLORS } from '../../theme';
 
 export default function OwnersListScreen({ navigation }) {
@@ -13,6 +13,7 @@ export default function OwnersListScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
+  const [selectedOwner, setSelectedOwner] = useState(null);
 
   const fetchOwners = async () => {
     try {
@@ -70,7 +71,7 @@ export default function OwnersListScreen({ navigation }) {
   );
 
   const renderOwner = ({ item }) => (
-    <View style={styles.ownerCard}>
+    <TouchableOpacity style={styles.ownerCard} onPress={() => setSelectedOwner(item)} activeOpacity={0.7}>
       <View style={styles.ownerInfo}>
         <View style={styles.ownerIcon}>
           <Ionicons name="person-outline" size={20} color={COLORS.black} />
@@ -90,7 +91,7 @@ export default function OwnersListScreen({ navigation }) {
           <Ionicons name="trash-outline" size={18} color={COLORS.red} />
         </TouchableOpacity>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   if (loading) {
@@ -99,6 +100,68 @@ export default function OwnersListScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
+
+      {/* Owner Detail Modal */}
+      <Modal
+        visible={!!selectedOwner}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setSelectedOwner(null)}
+      >
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setSelectedOwner(null)}>
+          <TouchableOpacity style={styles.modalSheet} activeOpacity={1}>
+            <View style={styles.modalHandle} />
+
+            <View style={styles.modalHeader}>
+              <View style={styles.modalIcon}>
+                <Ionicons name="person" size={28} color={COLORS.black} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.modalName}>{selectedOwner?.name}</Text>
+                <Text style={styles.modalNIC}>NIC: {selectedOwner?.NIC}</Text>
+              </View>
+              <TouchableOpacity onPress={() => setSelectedOwner(null)}>
+                <Ionicons name="close" size={24} color={COLORS.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+              {[
+                { icon: 'call-outline',     label: 'Contact',  value: selectedOwner?.contactNumber },
+                { icon: 'mail-outline',     label: 'Email',    value: selectedOwner?.email },
+                { icon: 'location-outline', label: 'Address',  value: selectedOwner?.address },
+                { icon: 'car-outline',      label: 'Vehicles', value: selectedOwner?.vehicles?.length ? `${selectedOwner.vehicles.length} vehicle(s) registered` : 'No vehicles linked' },
+              ].map((row) => (
+                <View key={row.label} style={styles.detailRow}>
+                  <View style={styles.detailIconWrap}>
+                    <Ionicons name={row.icon} size={18} color={COLORS.brandOrange} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.detailLabel}>{row.label}</Text>
+                    <Text style={styles.detailValue}>{row.value || '—'}</Text>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={styles.editBtn}
+                onPress={() => { setSelectedOwner(null); handleEdit(selectedOwner); }}
+              >
+                <Ionicons name="create-outline" size={18} color={COLORS.white} />
+                <Text style={styles.editBtnText}>Edit Owner</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.deleteBtn}
+                onPress={() => { setSelectedOwner(null); handleDelete(selectedOwner); }}
+              >
+                <Ionicons name="trash-outline" size={18} color={COLORS.red} />
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
       <View style={styles.header}>
         <Text style={styles.title}>Owners</Text>
         <TouchableOpacity style={styles.addBtn} onPress={() => navigation.navigate('AddEditOwner')}>
@@ -223,4 +286,51 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   emptyAddBtnText: { color: COLORS.white, fontWeight: '600' },
+
+  // Modal styles
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalSheet: {
+    backgroundColor: COLORS.white,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    paddingBottom: 36,
+    maxHeight: '75%',
+  },
+  modalHandle: {
+    width: 40, height: 4, borderRadius: 2,
+    backgroundColor: COLORS.border, alignSelf: 'center', marginBottom: 16,
+  },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 20 },
+  modalIcon: {
+    width: 52, height: 52, borderRadius: 26,
+    backgroundColor: COLORS.brandYellow,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  modalName: { fontSize: 18, fontWeight: '700', color: COLORS.black },
+  modalNIC:  { fontSize: 13, color: COLORS.textMuted, marginTop: 2 },
+  modalBody: { marginBottom: 16 },
+  detailRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: COLORS.border,
+  },
+  detailIconWrap: {
+    width: 36, height: 36, borderRadius: 10,
+    backgroundColor: COLORS.brandOrange + '15',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  detailLabel: { fontSize: 11, color: COLORS.textMuted, marginBottom: 2, fontWeight: '600' },
+  detailValue: { fontSize: 14, color: COLORS.black, fontWeight: '500' },
+  modalFooter: { flexDirection: 'row', gap: 12, marginTop: 8 },
+  editBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, backgroundColor: COLORS.brandOrange, borderRadius: 14, paddingVertical: 14,
+  },
+  editBtnText: { color: COLORS.white, fontWeight: '700', fontSize: 15 },
+  deleteBtn: {
+    width: 50, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: COLORS.redBg || '#FFF0F0', borderRadius: 14,
+    borderWidth: 1, borderColor: COLORS.red,
+  },
 });

@@ -61,20 +61,6 @@ export default function StaffListScreen({ navigation }) {
     fetchStaff();
   };
 
-  const applyFilter = () => {
-    setShowFilterModal(false);
-    setLoading(true);
-    loadStaff();
-  };
-
-  const clearFilter = () => {
-    setSelectedDepartment('');
-    setSearch('');
-    setShowFilterModal(false);
-    setLoading(true);
-    loadStaff();
-  };
-
   const renderStaffItem = ({ item }) => (
     <TouchableOpacity
       style={styles.card}
@@ -135,9 +121,15 @@ export default function StaffListScreen({ navigation }) {
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <View style={styles.header}>
         <Text style={styles.title}>Staff</Text>
-        <TouchableOpacity style={styles.addBtn} onPress={() => navigation.navigate('CreateStaff')}>
-          <Ionicons name="add" size={22} color={COLORS.black} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <TouchableOpacity style={styles.attendBtn} onPress={() => navigation.navigate('StaffAttendance')}>
+            <Ionicons name="checkmark-done-outline" size={18} color={COLORS.black} />
+            <Text style={styles.attendBtnText}>Attendance</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.addBtn} onPress={() => navigation.navigate('CreateStaff')}>
+            <Ionicons name="add" size={22} color={COLORS.black} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.searchRow}>
@@ -202,6 +194,8 @@ const styles = StyleSheet.create({
   },
   title:        { fontSize: 24, fontWeight: '600', color: COLORS.black },
   addBtn:       { backgroundColor: COLORS.brandYellow, borderRadius: 12, padding: 8 },
+  attendBtn:    { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: COLORS.brandYellow, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8 },
+  attendBtnText:{ fontSize: 12, fontWeight: '700', color: COLORS.black },
   searchRow:    { padding: 16, paddingBottom: 8 },
   searchBox:    { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: COLORS.bgLight, borderRadius: 12, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: 12, paddingVertical: 10 },
   searchInput:  { flex: 1, fontSize: 14 },

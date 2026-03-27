@@ -59,13 +59,24 @@ export default function StudentHomeScreen({ navigation }) {
           <Text style={{ color: COLORS.brandOrange }}>O</Text>
           <Text style={{ color: COLORS.black }}>n</Text>
         </Text>
-        <View style={styles.studentBadge}>
-          <Ionicons name="school" size={14} color={COLORS.black} />
-          <Text style={styles.studentBadgeText}>Student</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <TouchableOpacity
+            style={styles.bellBtn}
+            onPress={() => navigation.navigate('StudentNotifications')}
+          >
+            <Ionicons name="notifications-outline" size={22} color={COLORS.black} />
+          </TouchableOpacity>
+          <View style={styles.studentBadge}>
+            <Ionicons name="school" size={14} color={COLORS.black} />
+            <Text style={styles.studentBadgeText}>Student</Text>
+          </View>
         </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <Text style={styles.welcome}>Hello, {(student?.firstName || user?.name || 'Student').split(' ')[0]} 👋</Text>
+        <Text style={styles.subtitle}>Here's your learning dashboard.</Text>
+
         {/* Profile card */}
         <View style={styles.profileCard}>
           <View style={styles.avatar}>
@@ -92,11 +103,12 @@ export default function StudentHomeScreen({ navigation }) {
         {/* Stats */}
         <View style={styles.statsRow}>
           {[
-            { label: 'Sessions Done', value: completedSessions.length },
-            { label: 'Upcoming',      value: upcomingSessions.length  },
-            { label: 'Total Paid',    value: `LKR ${totalPaid.toLocaleString()}` },
+            { label: 'Sessions Done', value: completedSessions.length, icon: 'checkmark-circle-outline' },
+            { label: 'Upcoming',      value: upcomingSessions.length,  icon: 'calendar-outline' },
+            { label: 'Total Paid',    value: `LKR ${totalPaid.toLocaleString()}`, icon: 'card-outline' },
           ].map((s) => (
             <View key={s.label} style={styles.statCard}>
+              <Ionicons name={s.icon} size={20} color={COLORS.brandOrange} />
               <Text style={styles.statValue} numberOfLines={1}>{s.value}</Text>
               <Text style={styles.statLabel}>{s.label}</Text>
             </View>
@@ -121,18 +133,18 @@ export default function StudentHomeScreen({ navigation }) {
         <Text style={styles.sectionTitle}>Quick Actions</Text>
         <View style={styles.actionsGrid}>
           {[
-            { icon: 'school-outline',   label: 'Take Quiz',   screen: 'Learning'   },
-            { icon: 'card-outline',     label: 'Payments',    screen: 'Payments'   },
-            { icon: 'person-outline',   label: 'My Profile',  screen: 'Account'    },
-            { icon: 'document-text-outline', label: 'Progress', screen: 'Learning' },
-            { icon: 'calendar-outline', label: 'Book Session', screen: 'AvailableSessions' },
+            { icon: 'school-outline',         label: 'Take Quiz',    screen: 'LearningCatalog',      color: COLORS.blueBg      },
+            { icon: 'card-outline',           label: 'Payments',     screen: 'Payments',             color: COLORS.greenBg     },
+            { icon: 'calendar-outline',       label: 'Book Session', screen: 'AvailableSessions',    color: COLORS.redBg       },
+            { icon: 'notifications-outline',  label: 'Notices',      screen: 'StudentNotifications', color: COLORS.brandYellow },
+            { icon: 'chatbubbles-outline',    label: 'My Inquiries', screen: 'StudentInquiry',       color: COLORS.purpleBg    },
           ].map((a) => (
             <TouchableOpacity
               key={a.label}
-              style={styles.actionCard}
+              style={[styles.actionCard, { backgroundColor: a.color }]}
               onPress={() => navigation.navigate(a.screen)}
             >
-              <Ionicons name={a.icon} size={24} color={COLORS.brandOrange} />
+              <Ionicons name={a.icon} size={26} color={COLORS.black} />
               <Text style={styles.actionLabel}>{a.label}</Text>
             </TouchableOpacity>
           ))}
@@ -165,12 +177,6 @@ export default function StudentHomeScreen({ navigation }) {
             ))}
           </>
         )}
-
-        {/* Logout */}
-        <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
-          <Ionicons name="log-out-outline" size={20} color={COLORS.red} />
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -185,10 +191,13 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 24, borderBottomRightRadius: 24,
   },
   logo:          { fontSize: 28, fontWeight: '800' },
+  bellBtn:       { backgroundColor: COLORS.white, borderRadius: 10, padding: 8 },
   studentBadge:  { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.brandYellow, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6 },
   studentBadgeText: { fontSize: 12, fontWeight: '700', color: COLORS.black },
   content:       { padding: 20, paddingBottom: 40 },
-  profileCard:   { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: COLORS.brandYellow, borderRadius: 20, padding: 16, marginBottom: 16 },
+  welcome:       { fontSize: 22, fontWeight: '700', color: COLORS.black, marginTop: 4 },
+  subtitle:      { fontSize: 13, color: COLORS.textMuted, marginBottom: 20 },
+  profileCard:   { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: COLORS.brandYellow, borderRadius: 20, padding: 16, marginBottom: 24 },
   avatar:        { width: 52, height: 52, borderRadius: 26, backgroundColor: 'rgba(255,255,255,0.6)', alignItems: 'center', justifyContent: 'center' },
   avatarText:    { fontSize: 22, fontWeight: '800', color: COLORS.black },
   flex1:         { flex: 1 },
@@ -197,23 +206,21 @@ const styles = StyleSheet.create({
   profileNIC:    { fontSize: 11, color: COLORS.textMuted },
   statusBadge:   { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
   statusText:    { fontSize: 11, fontWeight: '700' },
-  statsRow:      { flexDirection: 'row', gap: 10, marginBottom: 16 },
-  statCard:      { flex: 1, backgroundColor: COLORS.bgLight, borderRadius: 14, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: COLORS.borderLight },
-  statValue:     { fontSize: 16, fontWeight: '800', color: COLORS.black },
-  statLabel:     { fontSize: 9, color: COLORS.textMuted, textAlign: 'center', marginTop: 2 },
-  reminderCard:  { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.white, borderWidth: 1, borderColor: COLORS.border, borderRadius: 14, padding: 16, marginBottom: 20 },
+  statsRow:      { flexDirection: 'row', gap: 10, marginBottom: 24 },
+  statCard:      { flex: 1, backgroundColor: COLORS.bgLight, borderRadius: 14, padding: 14, alignItems: 'center', gap: 4, borderWidth: 1, borderColor: COLORS.borderLight },
+  statValue:     { fontSize: 22, fontWeight: '800', color: COLORS.black },
+  statLabel:     { fontSize: 10, color: COLORS.textMuted, textAlign: 'center' },
+  reminderCard:  { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.white, borderWidth: 1, borderColor: COLORS.border, borderRadius: 14, padding: 16, marginBottom: 24 },
   reminderTitle: { fontSize: 14, fontWeight: '600', color: COLORS.black },
   reminderSub:   { fontSize: 12, color: COLORS.textMuted },
   sectionTitle:  { fontSize: 16, fontWeight: '700', color: COLORS.black, marginBottom: 12 },
-  actionsGrid:   { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
-  actionCard:    { width: '47%', backgroundColor: COLORS.bgLight, borderRadius: 14, padding: 16, alignItems: 'center', gap: 8, borderWidth: 1, borderColor: COLORS.borderLight },
-  actionLabel:   { fontSize: 12, fontWeight: '600', color: COLORS.black },
-  courseCard:    { backgroundColor: COLORS.bgLight, borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: COLORS.borderLight },
+  actionsGrid:   { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 24 },
+  actionCard:    { width: '47%', borderRadius: 16, padding: 18, alignItems: 'center', gap: 8 },
+  actionLabel:   { fontSize: 13, fontWeight: '700', color: COLORS.black },
+  courseCard:    { backgroundColor: COLORS.white, borderRadius: 14, borderWidth: 1, borderColor: COLORS.border, padding: 14, marginBottom: 10 },
   courseCategory:{ fontSize: 13, fontWeight: '700', color: COLORS.black, marginBottom: 8 },
   courseRow:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   courseFee:     { fontSize: 15, fontWeight: '700', color: COLORS.black },
   balanceBadge:  { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
   balanceText:   { fontSize: 12, fontWeight: '600' },
-  logoutBtn:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: COLORS.red, borderRadius: 14, paddingVertical: 14, marginTop: 8 },
-  logoutText:    { fontSize: 15, fontWeight: '700', color: COLORS.red },
 });

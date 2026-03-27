@@ -12,6 +12,10 @@ import { useAuth } from '../../../context/AuthContext';
 export default function LessonDetailScreen({ route, navigation }) {
   const { user } = useAuth();
   const { topicId, topicTitle, lessons } = route.params || {};
+  
+  // Debug log
+  console.log('LessonDetailScreen params:', { topicId, topicTitle, lessons });
+  
   const [currentLessonIndex, setCurrentLessonIndex] = useState(0);
   const [lesson, setLesson] = useState(null);
   const [videos, setVideos] = useState([]);
@@ -100,7 +104,7 @@ export default function LessonDetailScreen({ route, navigation }) {
     }
   };
 
-  if (loading && !currentLesson) {
+  if (loading) {
     return (
       <SafeAreaView style={styles.safe} edges={['bottom']}>
         <View style={styles.center}>
@@ -113,8 +117,19 @@ export default function LessonDetailScreen({ route, navigation }) {
   if (!currentLesson) {
     return (
       <SafeAreaView style={styles.safe} edges={['bottom']}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={24} color={COLORS.black} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle} numberOfLines={1}>{topicTitle || 'Lesson Detail'}</Text>
+          <View style={{ width: 24 }} />
+        </View>
         <View style={styles.center}>
-          <Text style={styles.errorText}>No lesson available</Text>
+          <Text style={styles.errorText}>
+            {!lessons || lessons.length === 0 
+              ? 'No lessons available in this topic' 
+              : 'No lesson selected'}
+          </Text>
           <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
             <Text style={styles.backBtnText}>Go Back</Text>
           </TouchableOpacity>

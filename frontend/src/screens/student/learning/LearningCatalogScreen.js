@@ -18,8 +18,10 @@ export default function LearningCatalogScreen({ navigation }) {
   const loadCatalog = useCallback(async () => {
     try {
       const res = await getLearningCatalog();
+      console.log('LearningCatalog response:', res.data);
       setTopics(res.data || []);
     } catch (e) {
+      console.log('LearningCatalog error:', e);
       Alert.alert('Error', e.response?.data?.message || 'Could not load learning content');
     } finally {
       setLoading(false);
@@ -61,16 +63,33 @@ export default function LearningCatalogScreen({ navigation }) {
         {topics.length === 0 ? (
           <View style={styles.empty}>
             <Ionicons name="school-outline" size={48} color={COLORS.brandOrange} />
-            <Text style={styles.emptyText}>No learning content yet.</Text>
+            <Text style={styles.emptyText}>No learning content available.</Text>
+            <Text style={styles.emptySubText}>Please check back later or contact your instructor.</Text>
           </View>
         ) : (
           topics.map((t) => (
-            <View key={t._id} style={styles.topicCard}>
-              <Text style={styles.topicTitle}>{t.title}</Text>
+            <View 
+              key={t._id} 
+              style={styles.topicCard}
+            >
+              <View style={styles.topicHeader}>
+                <Text style={styles.topicTitle}>{t.title}</Text>
+              </View>
               {!!t.description && <Text style={styles.topicDesc}>{t.description}</Text>}
 
               {(t.lessons || []).length === 0 ? (
-                <Text style={styles.lessonEmpty}>No lessons in this topic.</Text>
+                <View style={styles.lessonEmptyContainer}>
+                  <Text style={styles.lessonEmpty}>No lessons available in this topic yet.</Text>
+                  {user?.role === 'admin' && (
+                    <TouchableOpacity 
+                      style={styles.addLessonBtn}
+                      onPress={() => navigation.navigate('AdminLessons', { topicId: t._id })}
+                    >
+                      <Ionicons name="add" size={16} color={COLORS.white} />
+                      <Text style={styles.addLessonText}>Add Lesson</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               ) : (
                 (t.lessons || []).map((l) => (
                   <TouchableOpacity
@@ -130,11 +149,16 @@ const styles = StyleSheet.create({
   refreshRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   refreshText: { fontSize: 12, fontWeight: '700', color: COLORS.textMuted },
   empty: { alignItems: 'center', paddingVertical: 60, gap: 12 },
-  emptyText: { fontSize: 14, color: COLORS.textMuted },
+  emptyText: { fontSize: 14, color: COLORS.textMuted, fontWeight: '600' },
+  emptySubText: { fontSize: 12, color: COLORS.textMuted, textAlign: 'center', marginTop: 4 },
   topicCard: { backgroundColor: COLORS.white, borderRadius: 16, borderWidth: 1, borderColor: COLORS.border, padding: 14, marginBottom: 12 },
+  topicHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   topicTitle: { fontSize: 16, fontWeight: '800', color: COLORS.black },
   topicDesc: { fontSize: 12, color: COLORS.textMuted, marginTop: 4, marginBottom: 8 },
-  lessonEmpty: { fontSize: 12, color: COLORS.textMuted, marginTop: 8 },
+  lessonEmptyContainer: { alignItems: 'center', paddingVertical: 16 },
+  lessonEmpty: { fontSize: 12, color: COLORS.textMuted, marginBottom: 8 },
+  addLessonBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.brandOrange, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, gap: 4 },
+  addLessonText: { fontSize: 12, fontWeight: '600', color: COLORS.white },
   lessonCard: { backgroundColor: COLORS.bgLight, borderRadius: 14, padding: 12, marginTop: 10, borderWidth: 1, borderColor: COLORS.borderLight },
   lessonTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 },
   lessonTitle: { flex: 1, fontSize: 14, fontWeight: '800', color: COLORS.black },

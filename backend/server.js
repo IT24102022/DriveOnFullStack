@@ -30,9 +30,11 @@ app.use('/api/students',           require('./routes/students'));
 app.use('/api/license-categories', require('./routes/licenseCategories'));
 app.use('/api/vehicle-classes',    require('./routes/vehicleClasses'));
 app.use('/api/enrollment',         require('./routes/enrollment'));
-app.use('/api/owners', require('./routes/feedbacks'));
+app.use('/api/owners',    require('./routes/owners'));
+app.use('/api/feedbacks', require('./routes/feedbacks'));
 app.use('/api/staff',              require('./routes/staff'));
 app.use('/api/notifications',      require('./routes/notifications'));
+app.use('/api/inquiries',          require('./routes/inquiries'));
 
 // Exam System Routes
 app.use('/api/exams', require('./routes/examSystem'));

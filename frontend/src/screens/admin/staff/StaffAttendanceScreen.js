@@ -11,8 +11,9 @@ import {
   Dimensions,
   ActivityIndicator,
   ScrollView,
-  SafeAreaView
+  RefreshControl,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { getStaffAttendance, getStaff, markStaffAttendance } from '../../../services/api';
 import { COLORS } from '../../../theme';
@@ -34,6 +35,7 @@ const StaffAttendanceScreen = ({ navigation }) => {
   const [efficiency, setEfficiency] = useState('0');
   const [customerRating, setCustomerRating] = useState('0');
   const [submitting, setSubmitting] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const attendanceStatuses = ['Present', 'Absent', 'Late', 'Half Day', 'On Leave'];
   const leaveTypes = ['Annual', 'Sick', 'Maternity', 'Paternity', 'Unpaid', 'Special'];
@@ -59,6 +61,7 @@ const StaffAttendanceScreen = ({ navigation }) => {
       console.error(error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -206,12 +209,21 @@ const StaffAttendanceScreen = ({ navigation }) => {
       <SafeAreaView style={styles.topSafeArea} edges={['top']}>
         <View style={styles.header}>
           <Text style={styles.title}>Staff Attendance</Text>
-          <TouchableOpacity
-            style={styles.addBtn}
-            onPress={handleMarkAttendance}
-          >
-            <Ionicons name="add" size={22} color={COLORS.black} />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TouchableOpacity
+              style={styles.perfBtn}
+              onPress={() => navigation.navigate('StaffPerformance')}
+            >
+              <Ionicons name="bar-chart-outline" size={18} color={COLORS.black} />
+              <Text style={styles.perfBtnText}>Insights</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.addBtn}
+              onPress={handleMarkAttendance}
+            >
+              <Ionicons name="add" size={22} color={COLORS.black} />
+            </TouchableOpacity>
+          </View>
         </View>
       </SafeAreaView>
 
@@ -222,12 +234,9 @@ const StaffAttendanceScreen = ({ navigation }) => {
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl 
-            refreshing={refreshing} 
-            onRefresh={() => {
-              setRefreshing(true);
-              fetchAttendance();
-            }} 
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => { setRefreshing(true); loadData(); }}
           />
         }
         ListEmptyComponent={
@@ -456,14 +465,14 @@ const styles = StyleSheet.create({
     borderRadius: 12, 
     padding: 8 
   },
+  perfBtn:     { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: COLORS.brandYellow, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8 },
+  perfBtnText: { fontSize: 12, fontWeight: '700', color: COLORS.black },
   list: { 
     padding: 16, 
     paddingBottom: 40 
   },
   attendanceCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
+    flexDirection: 'column',
     backgroundColor: COLORS.white,
     borderRadius: 16,
     borderWidth: 1,

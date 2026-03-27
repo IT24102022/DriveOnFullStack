@@ -5,7 +5,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { getSessionAttendance, markAttendance } from '../../services/sessionApi';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
+import { getSessionAttendance } from '../../services/sessionApi';
 import { COLORS } from '../../theme';
 
 const STATUS_OPTIONS = ['Present', 'Late', 'Absent'];
@@ -20,7 +22,7 @@ export default function TakeAttendanceScreen({ route, navigation }) {
   const { sessionId } = route.params;
   const [data,       setData]       = useState(null);
   const [loading,    setLoading]    = useState(true);
-  const [saving,     setSaving]     = useState(false);
+  const [printing,   setPrinting]   = useState(false);
   const [attendance, setAttendance] = useState({});
 
   useEffect(() => {
@@ -49,20 +51,70 @@ export default function TakeAttendanceScreen({ route, navigation }) {
     setAttendance(updated);
   };
 
-  const handleSave = async () => {
+  const handlePrintPDF = async () => {
     try {
-      setSaving(true);
-      const attendanceList = Object.entries(attendance).map(([studentId, status]) => ({
-        studentId, status,
-      }));
-      await markAttendance({ sessionId, attendanceList });
-      Alert.alert('Saved! ✅', 'Attendance marked successfully', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
-    } catch {
-      Alert.alert('Error', 'Could not save attendance');
+      setPrinting(true);
+      const session = data?.session;
+      const rows = data?.attendanceList?.map((item, i) => {
+        const status = attendance[item.student._id] || 'Present';
+        const color = status === 'Present' ? '#16a34a' : status === 'Late' ? '#854d0e' : '#dc2626';
+        const bg    = status === 'Present' ? '#dcfce7'  : status === 'Late' ? '#fef9c3'  : '#fee2e2';
+        return `<tr style="background:${i % 2 === 0 ? '#f9fafb' : '#fff'}">
+          <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb">${i + 1}</td>
+          <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;font-weight:600">${item.student.firstName} ${item.student.lastName}</td>
+          <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;color:#6b7280">${item.student.NIC}</td>
+          <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb">
+            <span style="background:${bg};color:${color};padding:3px 10px;border-radius:20px;font-weight:700;font-size:12px">${status}</span>
+          </td>
+        </tr>`;
+      }).join('');
+
+      const html = `
+        <!DOCTYPE html><html><head><meta charset="utf-8">
+        <style>
+          body { font-family: Arial, sans-serif; padding: 30px; color: #111; }
+          h1   { font-size: 22px; color: #111; margin-bottom: 4px; }
+          .sub { color: #6b7280; font-size: 13px; margin-bottom: 24px; }
+          .info-grid { display: flex; gap: 24px; margin-bottom: 24px; }
+          .info-box  { background: #f3f4f6; border-radius: 10px; padding: 12px 18px; }
+          .info-box .val { font-size: 20px; font-weight: 800; color: #111; }
+          .info-box .lbl { font-size: 11px; color: #6b7280; margin-top: 2px; }
+          table { width: 100%; border-collapse: collapse; font-size: 13px; }
+          thead th { background: #111; color: #fff; padding: 12px 14px; text-align: left; font-size: 12px; }
+          .footer { margin-top: 30px; color: #9ca3af; font-size: 11px; text-align: right; }
+        </style></head><body>
+        <h1>Attendance Report</h1>
+        <p class="sub">DriveOn Driving School &nbsp;·&nbsp; Generated ${new Date().toLocaleString()}</p>
+        <div class="info-grid">
+          <div class="info-box"><div class="val">${session?.sessionType || ''}</div><div class="lbl">Session Type</div></div>
+          <div class="info-box"><div class="val">${new Date(session?.date).toDateString()}</div><div class="lbl">Date</div></div>
+          <div class="info-box"><div class="val">${session?.startTime} – ${session?.endTime}</div><div class="lbl">Time</div></div>
+          <div class="info-box"><div class="val" style="color:#16a34a">${Object.values(attendance).filter(s=>s==='Present').length}</div><div class="lbl">Present</div></div>
+          <div class="info-box"><div class="val" style="color:#854d0e">${Object.values(attendance).filter(s=>s==='Late').length}</div><div class="lbl">Late</div></div>
+          <div class="info-box"><div class="val" style="color:#dc2626">${Object.values(attendance).filter(s=>s==='Absent').length}</div><div class="lbl">Absent</div></div>
+        </div>
+        <table>
+          <thead><tr>
+            <th style="width:40px">#</th>
+            <th>Student Name</th>
+            <th>NIC</th>
+            <th>Status</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <div class="footer">DriveOn · Attendance Report · ${new Date().toLocaleDateString()}</div>
+        </body></html>`;
+
+      const { uri } = await Print.printToFileAsync({ html, base64: false });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Attendance PDF' });
+      } else {
+        await Print.printAsync({ uri });
+      }
+    } catch (e) {
+      Alert.alert('Error', 'Could not generate PDF');
     } finally {
-      setSaving(false);
+      setPrinting(false);
     }
   };
 
@@ -147,13 +199,13 @@ export default function TakeAttendanceScreen({ route, navigation }) {
           );
         })}
 
-        {/* Save button */}
-        <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={saving}>
-          {saving
+        {/* Print PDF button */}
+        <TouchableOpacity style={styles.saveBtn} onPress={handlePrintPDF} disabled={printing}>
+          {printing
             ? <ActivityIndicator color={COLORS.white} />
             : <>
-                <Ionicons name="save-outline" size={20} color={COLORS.white} />
-                <Text style={styles.saveBtnText}>Save Attendance</Text>
+                <Ionicons name="print-outline" size={20} color={COLORS.white} />
+                <Text style={styles.saveBtnText}>Print Attendance PDF</Text>
               </>
           }
         </TouchableOpacity>

@@ -44,7 +44,7 @@ export default function LearningScreen({ navigation }) {
   const attempts = progress.length;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.title}>Learning & Exams</Text>
       </View>
@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
   center:  { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: {
     backgroundColor: COLORS.gray,
-    paddingTop: 52,
+    paddingTop: 16,
     paddingBottom: 16,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 24,

@@ -1,7 +1,8 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../../theme';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import LessonsTab from './components/LessonsTab';
 import QuizzesTab from './components/QuizzesTab';
 import PerformanceTab from './components/PerformanceTab';

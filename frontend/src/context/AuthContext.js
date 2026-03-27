@@ -7,6 +7,7 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [user,    setUser]    = useState(null);
   const [loading, setLoading] = useState(true);
+  const [signing, setSigning] = useState(false);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -33,6 +34,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (email, password) => {
+    setSigning(true);
     let data = null;
     let role = null;
 
@@ -64,7 +66,10 @@ export const AuthProvider = ({ children }) => {
       }
     }
 
-    if (!data) throw new Error('Invalid email or password');
+    if (!data) {
+      setSigning(false);
+      throw new Error('Invalid email or password');
+    }
 
     await SecureStore.setItemAsync('token',    data.token);
     await SecureStore.setItemAsync('userType', role);
@@ -72,6 +77,8 @@ export const AuthProvider = ({ children }) => {
 
     const userData = { ...data, role };
     setUser(userData);
+    // Add a small delay for smooth transition
+    setTimeout(() => setSigning(false), 500);
     return userData;
   };
 
@@ -83,7 +90,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, signing, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

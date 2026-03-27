@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../../../theme';
-import { getLearningCatalog, getStudentLessonProgress } from '../../../../services/learningApi';
+import { getLearningCatalog, getStudentLessonProgress, getLearningLessons } from '../../../../services/learningApi';
 import { useAuth } from '../../../../context/AuthContext';
 
 export default function LessonsTab({ navigation }) {
@@ -41,6 +41,36 @@ export default function LessonsTab({ navigation }) {
     loadData();
   }, [loadData]);
 
+  const handleCoursePress = async (item) => {
+    try {
+      // If lessons are already loaded, navigate directly
+      if (item.lessons && item.lessons.length > 0) {
+        navigation.navigate('LessonDetail', { 
+          topicId: item._id, 
+          topicTitle: item.title,
+          lessons: item.lessons
+        });
+        return;
+      }
+
+      // Otherwise, fetch lessons for this topic
+      Alert.alert('Loading', 'Fetching lessons...');
+      const lessonsRes = await getLearningLessons({ topic: item._id });
+      
+      if (lessonsRes.data && lessonsRes.data.length > 0) {
+        navigation.navigate('LessonDetail', { 
+          topicId: item._id, 
+          topicTitle: item.title,
+          lessons: lessonsRes.data
+        });
+      } else {
+        Alert.alert('No Lessons', 'This topic has no lessons available yet.');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Could not load lessons for this topic');
+    }
+  };
+
   const getProgressForLesson = (lessonId) => {
     const progress = lessonProgress.find(p => p.lesson._id === lessonId);
     return progress || { completionStatus: 'Not Started', progressPercentage: 0 };
@@ -58,11 +88,7 @@ export default function LessonsTab({ navigation }) {
     return (
       <TouchableOpacity
         style={styles.courseCard}
-        onPress={() => navigation.navigate('LessonDetail', { 
-          topicId: item._id, 
-          topicTitle: item.title,
-          lessons: item.lessons || []
-        })}
+        onPress={() => handleCoursePress(item)}
       >
         <View style={styles.cardHeader}>
           <View style={[styles.iconContainer, { backgroundColor: COLORS.brandOrange + '20' }]}>
@@ -83,7 +109,10 @@ export default function LessonsTab({ navigation }) {
           <View style={[styles.progressFill, { width: `${overallProgress}%` }]} />
         </View>
 
-        <TouchableOpacity style={styles.continueBtn}>
+        <TouchableOpacity 
+          style={styles.continueBtn}
+          onPress={() => handleCoursePress(item)}
+        >
           <Text style={styles.continueBtnText}>Continue Learning</Text>
           <Ionicons name="arrow-forward" size={16} color={COLORS.white} />
         </TouchableOpacity>
@@ -149,7 +178,10 @@ export default function LessonsTab({ navigation }) {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.quizCta}>
+        <TouchableOpacity 
+          style={styles.quizCta}
+          onPress={() => navigation.navigate('LearningCatalog')}
+        >
           <Ionicons name="help-circle" size={24} color={COLORS.white} />
           <Text style={styles.quizCtaText}>Test Your Knowledge</Text>
           <Ionicons name="arrow-forward" size={16} color={COLORS.white} />

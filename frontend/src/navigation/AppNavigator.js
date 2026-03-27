@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { COLORS } from '../theme';
 
+
 import LoginScreen          from '../screens/auth/LoginScreen';
 import AdminHomeScreen      from '../screens/AdminHomeScreen';
 import InstructorHomeScreen     from '../screens/InstructorHomeScreen';
@@ -55,6 +56,11 @@ import AdminSessionListScreen from '../screens/admin/AdminSessionListScreen';
 import AddEditSessionScreen   from '../screens/admin/AddEditSessionScreen';
 import SessionReportScreen    from '../screens/admin/SessionReportScreen';
 import FeedbackScreen         from '../screens/student/FeedbackScreen';
+import FeedbackManagementScreen from '../screens/admin/FeedbackManagementScreen';
+import LicenseCategoriesScreen from '../screens/admin/LicenseCategoriesScreen';
+import VehicleClassesScreen from '../screens/admin/VehicleClassesScreen';
+import EnrollmentManagementScreen from '../screens/admin/EnrollmentManagementScreen';
+import AttendanceManagementScreen from '../screens/admin/AttendanceManagementScreen';
 
 import SessionEnrollmentScreen   from '../screens/admin/SessionEnrollmentScreen';
 import TakeAttendanceScreen      from '../screens/admin/TakeAttendanceScreen';
@@ -81,9 +87,14 @@ import StaffListScreen from '../screens/admin/staff/StaffListScreen';
 import CreateStaffScreen from '../screens/admin/staff/CreateStaffScreen';
 import EditStaffScreen from '../screens/admin/staff/EditStaffScreen';
 import StaffAttendanceScreen from '../screens/admin/staff/StaffAttendanceScreen';
+import StaffPerformanceScreen from '../screens/admin/staff/StaffPerformanceScreen';
 import StaffLoginScreen from '../screens/staff/StaffLoginScreen';
 import StaffHomeScreen from '../screens/staff/StaffHomeScreen';
 import StaffNotificationsScreen from '../screens/staff/StaffNotificationsScreen';
+import StudentNotificationsScreen from '../screens/student/StudentNotificationsScreen';
+import StudentInquiryScreen from '../screens/student/StudentInquiryScreen';
+import InquiryManagementScreen from '../screens/admin/InquiryManagementScreen';
+import SendNoticeScreen from '../screens/admin/SendNoticeScreen';
 
 const Tab   = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -164,7 +175,11 @@ export default function AppNavigator() {
 
   if (user.role === 'admin') {
     return (
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator screenOptions={{ 
+        headerShown: false,
+        animation: 'slide_from_right',
+        animationTypeForReplace: 'push',
+      }}>
         <Stack.Screen name="AdminMain"         component={AdminTabs} />
         <Stack.Screen name="StudentList"       component={StudentListScreen} />
         <Stack.Screen name="AddStudent"        component={AddEditStudentScreen} />
@@ -185,11 +200,16 @@ export default function AppNavigator() {
         <Stack.Screen name="AddEditSession"    component={AddEditSessionScreen} />
         <Stack.Screen name="SessionDetail"     component={AddEditSessionScreen} />
         <Stack.Screen name="SessionReport"     component={SessionReportScreen} />
-        <Stack.Screen name="AddPayment"        component={AddPaymentScreen} />
+        <Stack.Screen name="Feedback"          component={FeedbackScreen} />
+        <Stack.Screen name="FeedbackManagement" component={FeedbackManagementScreen} />
+        <Stack.Screen name="LicenseCategories" component={LicenseCategoriesScreen} />
+        <Stack.Screen name="VehicleClasses" component={VehicleClassesScreen} />
+        <Stack.Screen name="EnrollmentManagement" component={EnrollmentManagementScreen} />
+        <Stack.Screen name="AttendanceManagement" component={AttendanceManagementScreen} />
         <Stack.Screen name="SessionEnrollment"     component={SessionEnrollmentScreen} />
-<Stack.Screen name="TakeAttendance"        component={TakeAttendanceScreen} />
-<Stack.Screen name="AttendanceAnalytics"   component={AttendanceAnalyticsScreen} />
-<Stack.Screen name="StudentProgress"       component={StudentProgressScreen} />
+        <Stack.Screen name="TakeAttendance"        component={TakeAttendanceScreen} />
+        <Stack.Screen name="AttendanceAnalytics"   component={AttendanceAnalyticsScreen} />
+        <Stack.Screen name="StudentProgress"       component={StudentProgressScreen} />
         <Stack.Screen name="AdminTopics"           component={AdminTopicsScreen} />
         <Stack.Screen name="AdminLessons"          component={AdminLessonsScreen} />
         <Stack.Screen name="AdminLessonDetail"     component={AdminLessonDetailScreen} />
@@ -214,13 +234,20 @@ export default function AppNavigator() {
         <Stack.Screen name="CreateStaff"       component={CreateStaffScreen} />
         <Stack.Screen name="EditStaff"         component={EditStaffScreen} />
         <Stack.Screen name="StaffAttendance"   component={StaffAttendanceScreen} />
+        <Stack.Screen name="StaffPerformance"   component={StaffPerformanceScreen} />
+        <Stack.Screen name="InquiryManagement" component={InquiryManagementScreen} />
+        <Stack.Screen name="SendNotice"        component={SendNoticeScreen} />
       </Stack.Navigator>
     );
   }
 
   if (user.role === 'student') {
     return (
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator screenOptions={{ 
+        headerShown: false,
+        animation: 'slide_from_right',
+        animationTypeForReplace: 'push',
+      }}>
         <Stack.Screen name="StudentMain" component={StudentTabs} />
         <Stack.Screen name="Quiz"        component={QuizScreen} />
         <Stack.Screen name="LessonDetail"        component={LessonDetailScreen} />
@@ -232,15 +259,22 @@ export default function AppNavigator() {
         <Stack.Screen name="AddPayment"  component={AddPaymentScreen} />
         <Stack.Screen name="BookSession" component={BookSessionScreen} />
         <Stack.Screen name="AvailableSessions" component={AvailableSessionsScreen} />
+        <Stack.Screen name="LearningCatalog" component={LearningCatalogScreen} />
         <Stack.Screen name="StudentExams" component={StudentExamsScreen} />
         <Stack.Screen name="StudentExamDetails" component={StudentExamDetailsScreen} />
+        <Stack.Screen name="StudentNotifications" component={StudentNotificationsScreen} />
+        <Stack.Screen name="StudentInquiry" component={StudentInquiryScreen} />
       </Stack.Navigator>
     );
   }
 
   if (user.role === 'instructor') {
     return (
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator screenOptions={{ 
+        headerShown: false,
+        animation: 'slide_from_right',
+        animationTypeForReplace: 'push',
+      }}>
         <Stack.Screen name="InstructorMain" component={InstructorTabs} />
         <Stack.Screen name="InstructorExams" component={InstructorExamsScreen} />
         <Stack.Screen name="InstructorExamDetails" component={InstructorExamDetailsScreen} />
@@ -250,7 +284,11 @@ export default function AppNavigator() {
 
   if (user.role === 'staff') {
     return (
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator screenOptions={{ 
+        headerShown: false,
+        animation: 'slide_from_right',
+        animationTypeForReplace: 'push',
+      }}>
         <Stack.Screen name="StaffMain" component={StaffHomeScreen} />
         <Stack.Screen name="StaffNotifications" component={StaffNotificationsScreen} />
         <Stack.Screen name="StaffAttendance" component={StaffAttendanceScreen} />

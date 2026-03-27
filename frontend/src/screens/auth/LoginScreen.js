@@ -9,23 +9,19 @@ import { useAuth } from '../../context/AuthContext';
 import { COLORS } from '../../theme';
 
 export default function LoginScreen() {
-  const { login }  = useAuth();
+  const { login, signing }  = useAuth();
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
-  const [loading,  setLoading]  = useState(false);
 
   const handleLogin = async () => {
     if (!email.trim() || !password) {
       return Alert.alert('Error', 'Please enter your email and password');
     }
     try {
-      setLoading(true);
       await login(email.trim().toLowerCase(), password);
     } catch (error) {
       Alert.alert('Login Failed', error.message || 'Invalid email or password');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -94,8 +90,8 @@ export default function LoginScreen() {
             </View>
 
             {/* Login Button */}
-            <TouchableOpacity style={styles.btn} onPress={handleLogin} disabled={loading}>
-              {loading
+            <TouchableOpacity style={styles.btn} onPress={handleLogin} disabled={signing}>
+              {signing
                 ? <ActivityIndicator color={COLORS.white} />
                 : <>
                     <Ionicons name="log-in-outline" size={20} color={COLORS.white} />
@@ -130,6 +126,14 @@ export default function LoginScreen() {
           <Text style={styles.footer}>© 2026 DriveOn. All rights reserved.</Text>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Loading Overlay */}
+      {signing && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color={COLORS.white} />
+          <Text style={styles.loadingText}>Signing in...</Text>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -175,5 +179,22 @@ const styles = StyleSheet.create({
   rolesRow: { flexDirection: 'row', justifyContent: 'center', gap: 24, marginBottom: 16 },
   roleItem: { alignItems: 'center', gap: 4 },
   roleLabel:{ fontSize: 11, fontWeight: '600', color: COLORS.textMuted },
-  footer:   { textAlign: 'center', fontSize: 11, color: COLORS.textMuted },
+  footer: { textAlign: 'center', fontSize: 12, color: COLORS.textMuted, marginTop: 24 },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  loadingText: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 12,
+  },
 });

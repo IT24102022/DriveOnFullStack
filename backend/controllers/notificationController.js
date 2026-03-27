@@ -20,19 +20,19 @@ const getNotifications = async (req, res) => {
     // Filter by user type
     if (user.role === 'student') {
       filter.$or = [
-        { student: user.studentId },
+        { student: user.id },
         { broadcastTo: 'AllStudents' },
         { broadcastTo: 'AllUsers' }
       ];
     } else if (user.role === 'instructor') {
       filter.$or = [
-        { instructor: user.instructorId },
+        { instructor: user.id },
         { broadcastTo: 'AllInstructors' },
         { broadcastTo: 'AllUsers' }
       ];
     } else if (user.role === 'staff') {
       filter.$or = [
-        { staff: user.staffId },
+        { staff: user.id },
         { broadcastTo: 'AllStaff' },
         { broadcastTo: 'AllUsers' }
       ];
@@ -210,10 +210,10 @@ const markNotificationRead = async (req, res) => {
 
     // Check if user owns this notification
     const user = req.user;
-    const isOwner = 
-      (user.role === 'student' && notification.student?.toString() === user.studentId) ||
-      (user.role === 'instructor' && notification.instructor?.toString() === user.instructorId) ||
-      (user.role === 'staff' && notification.staff?.toString() === user.staffId) ||
+    const isOwner =
+      (user.role === 'student'    && notification.student?.toString()    === user.id) ||
+      (user.role === 'instructor' && notification.instructor?.toString() === user.id) ||
+      (user.role === 'staff'      && notification.staff?.toString()      === user.id) ||
       user.role === 'admin';
 
     if (!isOwner) {
@@ -241,11 +241,11 @@ const markAllNotificationsRead = async (req, res) => {
     let filter = { status: 'Unread' };
     
     if (user.role === 'student') {
-      filter.student = user.studentId;
+      filter.student = user.id;
     } else if (user.role === 'instructor') {
-      filter.instructor = user.instructorId;
+      filter.instructor = user.id;
     } else if (user.role === 'staff') {
-      filter.staff = user.staffId;
+      filter.staff = user.id;
     }
 
     const result = await Notification.updateMany(
@@ -278,10 +278,10 @@ const deleteNotification = async (req, res) => {
 
     // Check if user owns this notification or is admin
     const user = req.user;
-    const isOwner = 
-      (user.role === 'student' && notification.student?.toString() === user.studentId) ||
-      (user.role === 'instructor' && notification.instructor?.toString() === user.instructorId) ||
-      (user.role === 'staff' && notification.staff?.toString() === user.staffId) ||
+    const isOwner =
+      (user.role === 'student'    && notification.student?.toString()    === user.id) ||
+      (user.role === 'instructor' && notification.instructor?.toString() === user.id) ||
+      (user.role === 'staff'      && notification.staff?.toString()      === user.id) ||
       user.role === 'admin';
 
     if (!isOwner) {

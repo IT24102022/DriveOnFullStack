@@ -97,4 +97,13 @@ export const markAllNotificationsRead = ()     => api.patch('/notifications/read
 export const deleteNotification     = (id)      => api.delete(`/notifications/${id}`);
 export const getNotificationStats   = ()       => api.get('/notifications/stats');
 
+// ── Inquiries ────────────────────────────────────────────────────────────────────
+export const getInquiries      = (params) => api.get('/inquiries', { params });
+export const createInquiry     = (data)   => api.post('/inquiries', data);
+export const updateInquiry     = (id, data) => api.put(`/inquiries/${id}`, data);
+export const deleteInquiry     = (id)     => api.delete(`/inquiries/${id}`);
+export const replyToInquiry    = (id, data) => api.put(`/inquiries/${id}/reply`, data);
+export const closeInquiry      = (id)     => api.patch(`/inquiries/${id}/close`);
+export const getInquiryStats   = ()       => api.get('/inquiries/stats');
+
 export default api;

@@ -50,9 +50,11 @@ export default function AdminHomeScreen({ navigation }) {
     { icon: 'car-outline',         label: 'Vehicles',    screen: 'VehicleList',    color: COLORS.redBg     },
     { icon: 'school-outline',      label: 'Learning',    screen: 'CreateLearningContent',    color: COLORS.blueBg    },
     { icon: 'card-outline',        label: 'Payments',    screen: 'Payments',       color: COLORS.greenBg   },
-    { icon: 'bar-chart-outline', label: 'Attendance', screen: 'AttendanceAnalytics', color: COLORS.brandYellow },
+    { icon: 'checkmark-done-outline', label: 'Attendance', screen: 'AttendanceManagement', color: COLORS.brandYellow },
     { icon: 'clipboard-outline',   label: 'Exam Schedule', screen: 'ExamDashboard', color: COLORS.purpleBg   },
     { icon: 'business-outline',    label: 'Staff',       screen: 'StaffList',       color: COLORS.blueBg     },
+    { icon: 'megaphone-outline',   label: 'Send Notice', screen: 'SendNotice',      color: COLORS.greenBg    },
+    { icon: 'chatbubbles-outline', label: 'Inquiries',   screen: 'InquiryManagement', color: COLORS.redBg    },
   ];
 
   if (loading) return <View style={styles.center}><ActivityIndicator size="large" color={COLORS.brandOrange} /></View>;

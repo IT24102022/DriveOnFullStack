@@ -22,16 +22,14 @@ router.route('/')
   .get(protect, getAllStaff)
   .post(protect, adminOnly, upload.single('image'), createStaff);
 
+// Static named routes MUST come before /:id to avoid being matched as a dynamic param
+router.get('/attendance', protect, adminOnly, getStaffAttendance);
+router.post('/attendance', protect, adminOnly, markStaffAttendance);
+router.get('/performance', protect, adminOnly, getStaffPerformance);
+
 router.route('/:id')
   .get(protect, getStaffById)
   .put(protect, adminOnly, upload.single('image'), updateStaff)
   .delete(protect, adminOnly, deleteStaff);
-
-// Attendance routes
-router.get('/attendance', protect, adminOnly, getStaffAttendance);
-router.post('/attendance', protect, adminOnly, markStaffAttendance);
-
-// Performance reports
-router.get('/performance', protect, adminOnly, getStaffPerformance);
 
 module.exports = router;

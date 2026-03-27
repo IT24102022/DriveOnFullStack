@@ -46,7 +46,7 @@ export default function AddEditOwnerScreen({ route, navigation }) {
     setForm(prev => ({ ...prev, [field]: value }));
 
   const handleSubmit = async () => {
-    if (!form.NIC || !form.name || !form.email || !form.contactNumber) {
+    if (!form.NIC || !form.name || !form.address || !form.email || !form.contactNumber) {
       return Alert.alert('Error', 'Please fill all required fields');
     }
     try {
@@ -92,7 +92,7 @@ export default function AddEditOwnerScreen({ route, navigation }) {
   const fields = [
     { key: 'NIC',           label: 'NIC *',            placeholder: '199012345678' },
     { key: 'name',          label: 'Full Name *',       placeholder: 'Kamal Perera' },
-    { key: 'address',       label: 'Address',           placeholder: 'No 5, Galle Road' },
+    { key: 'address',       label: 'Address *',         placeholder: 'No 5, Galle Road' },
     { key: 'email',         label: 'Email *',           placeholder: 'kamal@email.com', keyboard: 'email-address' },
     { key: 'contactNumber', label: 'Contact Number *',  placeholder: '077 123 4567', keyboard: 'phone-pad' },
   ];

@@ -89,7 +89,7 @@ export default function CreateLearningContentScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={COLORS.black} />
@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: {
     backgroundColor: COLORS.gray,
-    paddingTop: 52,
+    paddingTop: 16,
     paddingBottom: 16,
     paddingHorizontal: 20,
     flexDirection: 'row',

@@ -140,6 +140,14 @@ export default function AdminSessionListScreen({ navigation }) {
   >
     <Ionicons name="people-outline" size={18} color={COLORS.green} />
   </TouchableOpacity>
+  {(item.enrolledStudents?.length > 0) && item.status !== 'Cancelled' && (
+    <TouchableOpacity
+      style={[styles.iconBtn, { backgroundColor: COLORS.brandYellow }]}
+      onPress={() => navigation.navigate('TakeAttendance', { sessionId: item._id })}
+    >
+      <Ionicons name="clipboard-outline" size={18} color={COLORS.black} />
+    </TouchableOpacity>
+  )}
   <TouchableOpacity
     style={styles.iconBtn}
     onPress={() => navigation.navigate('AddEditSession', { sessionId: item._id })}

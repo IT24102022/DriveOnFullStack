@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { submitFeedback, getTemplates } from '../../services/sessionApi';
+import { submitFeedback, getFeedbackTemplates } from '../../services/feedbackApi';
 import { COLORS } from '../../theme';
 
 export default function FeedbackScreen({ route, navigation }) {
@@ -18,7 +18,7 @@ export default function FeedbackScreen({ route, navigation }) {
   const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
-    getTemplates().then(({ data }) => setTemplates(data)).catch(() => {});
+    getFeedbackTemplates().then(({ data }) => setTemplates(data)).catch(() => {});
   }, []);
 
   const handleSubmit = async () => {
