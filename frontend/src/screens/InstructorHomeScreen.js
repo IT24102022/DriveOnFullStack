@@ -10,7 +10,7 @@ import { getInstructorById, getNotifications, markAllRead } from '../services/in
 import { COLORS } from '../theme';
 
 export default function InstructorHomeScreen({ navigation }) {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [instructor, setInstructor] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -41,11 +41,15 @@ export default function InstructorHomeScreen({ navigation }) {
     } catch {}
   };
 
+  const today = new Date().toLocaleDateString('en-US', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+  });
+
   if (loading) return <View style={styles.center}><ActivityIndicator size="large" color={COLORS.brandOrange} /></View>;
 
   const unreadCount  = notifications.filter(n => n.status === 'Unread').length;
   const upcomingSessions = instructor?.sessions?.filter(
-    s => s.status === 'Scheduled' || s.status === 'Pending'
+    s => s.status === 'Scheduled' || s.status === 'Ongoing'
   ) || [];
   const completedSessions = instructor?.sessions?.filter(
     s => s.status === 'Completed'
@@ -62,17 +66,26 @@ export default function InstructorHomeScreen({ navigation }) {
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.logo}>
-          <Text style={{ color: COLORS.black }}>Drive</Text>
-          <Text style={{ color: COLORS.brandOrange }}>O</Text>
-          <Text style={{ color: COLORS.black }}>n</Text>
-        </Text>
+        <View>
+          <Text style={styles.logo}>
+            <Text style={{ color: COLORS.black }}>Drive</Text>
+            <Text style={{ color: COLORS.brandOrange }}>O</Text>
+            <Text style={{ color: COLORS.black }}>n</Text>
+          </Text>
+          <Text style={styles.dateText}>{today}</Text>
+        </View>
         <View style={styles.headerRight}>
-          {unreadCount > 0 && (
-            <View style={styles.notifBadge}>
-              <Text style={styles.notifBadgeText}>{unreadCount}</Text>
-            </View>
-          )}
+          <TouchableOpacity
+            style={styles.bellBtn}
+            onPress={() => navigation.navigate('InstructorNotifications', { instructorId: user._id })}
+          >
+            <Ionicons name="notifications-outline" size={22} color={COLORS.black} />
+            {unreadCount > 0 && (
+              <View style={styles.notifBadge}>
+                <Text style={styles.notifBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
           <View style={styles.instructorBadge}>
             <Ionicons name="car" size={14} color={COLORS.black} />
             <Text style={styles.instructorBadgeText}>Instructor</Text>
@@ -81,6 +94,8 @@ export default function InstructorHomeScreen({ navigation }) {
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <Text style={styles.welcome}>Hello, {(instructor?.fullName || user?.fullName || 'Instructor').split(' ')[0]} 👋</Text>
+
         {/* Profile */}
         <View style={styles.profileCard}>
           <View style={styles.avatar}>
@@ -116,6 +131,44 @@ export default function InstructorHomeScreen({ navigation }) {
             </View>
           ))}
         </View>
+
+        {/* Categorised Quick Actions */}
+        {[
+          {
+            title: 'My Work',
+            icon:  'briefcase-outline',
+            items: [
+              { icon: 'calendar-outline',       label: 'My Sessions',  screen: 'Sessions',               color: COLORS.greenBg,    tab: true },
+              { icon: 'notifications-outline',  label: 'Notifications', screen: 'InstructorNotifications', color: COLORS.brandYellow, params: { instructorId: user._id } },
+            ],
+          },
+          {
+            title: 'Account',
+            icon:  'person-circle-outline',
+            items: [
+              { icon: 'person-outline', label: 'My Profile', screen: 'Account', color: COLORS.blueBg, tab: true },
+            ],
+          },
+        ].map((group) => (
+          <View key={group.title} style={styles.groupBlock}>
+            <View style={styles.groupHeader}>
+              <Ionicons name={group.icon} size={15} color={COLORS.brandOrange} />
+              <Text style={styles.groupTitle}>{group.title}</Text>
+            </View>
+            <View style={styles.actionsGrid}>
+              {group.items.map((a) => (
+                <TouchableOpacity
+                  key={a.label}
+                  style={[styles.actionCard, { backgroundColor: a.color }]}
+                  onPress={() => a.tab ? navigation.jumpTo(a.screen) : navigation.navigate(a.screen, a.params)}
+                >
+                  <Ionicons name={a.icon} size={24} color={COLORS.black} />
+                  <Text style={styles.actionLabel}>{a.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        ))}
 
         {/* Assigned Vehicles */}
         {instructor?.assignedVehicles?.length > 0 && (
@@ -175,11 +228,6 @@ export default function InstructorHomeScreen({ navigation }) {
           })
         )}
 
-        {/* Logout */}
-        <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
-          <Ionicons name="log-out-outline" size={20} color={COLORS.red} />
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -194,12 +242,21 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 24, borderBottomRightRadius: 24,
   },
   logo:         { fontSize: 28, fontWeight: '800' },
+  dateText:     { fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
+  welcome:      { fontSize: 22, fontWeight: '700', color: COLORS.black, marginTop: 4, marginBottom: 20 },
   headerRight:  { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  notifBadge:   { backgroundColor: COLORS.red, borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2 },
-  notifBadgeText:{ fontSize: 11, fontWeight: '800', color: COLORS.white },
+  bellBtn:       { width: 38, height: 38, borderRadius: 19, backgroundColor: COLORS.bgLight, alignItems: 'center', justifyContent: 'center' },
+  notifBadge:    { position: 'absolute', top: -4, right: -4, backgroundColor: COLORS.red, borderRadius: 9, minWidth: 18, height: 18, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, borderWidth: 2, borderColor: COLORS.gray },
+  notifBadgeText:{ fontSize: 9, fontWeight: '800', color: COLORS.white },
   instructorBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.brandYellow, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6 },
   instructorBadgeText: { fontSize: 12, fontWeight: '700', color: COLORS.black },
   content:      { padding: 20, paddingBottom: 40 },
+  groupBlock:   { marginBottom: 20 },
+  groupHeader:  { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 },
+  groupTitle:   { fontSize: 14, fontWeight: '700', color: COLORS.black },
+  actionsGrid:  { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  actionCard:   { width: '47%', borderRadius: 16, padding: 16, alignItems: 'center', gap: 8 },
+  actionLabel:  { fontSize: 13, fontWeight: '700', color: COLORS.black },
   profileCard:  { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: COLORS.brandYellow, borderRadius: 20, padding: 16, marginBottom: 16 },
   avatar:       { width: 52, height: 52, borderRadius: 26, backgroundColor: 'rgba(255,255,255,0.6)', alignItems: 'center', justifyContent: 'center' },
   avatarText:   { fontSize: 22, fontWeight: '800', color: COLORS.black },
@@ -228,6 +285,4 @@ const styles = StyleSheet.create({
   notifMessage: { fontSize: 13, color: COLORS.black, lineHeight: 18 },
   notifDate:    { fontSize: 11, color: COLORS.textMuted, marginTop: 4 },
   unreadDot:    { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.brandOrange, marginTop: 4 },
-  logoutBtn:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: COLORS.red, borderRadius: 14, paddingVertical: 14, marginTop: 16 },
-  logoutText:   { fontSize: 15, fontWeight: '700', color: COLORS.red },
 });

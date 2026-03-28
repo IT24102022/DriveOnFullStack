@@ -252,7 +252,8 @@ const removeStudent = async (req, res) => {
 const getAvailableSessions = async (req, res) => {
   try {
     const today = new Date();
-    const sessions = await Session.find({ date: { $gte: today }, status: 'Scheduled' })
+    today.setUTCHours(0, 0, 0, 0); // compare date only, not time-of-day
+    const sessions = await Session.find({ date: { $gte: today }, status: { $in: ['Scheduled', 'Ongoing'] } })
       .populate('instructor', 'fullName specialization')
       .populate('vehicle', 'brand model licensePlate')
       .sort({ date: 1 });

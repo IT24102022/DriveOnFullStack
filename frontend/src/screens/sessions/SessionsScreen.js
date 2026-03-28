@@ -5,19 +5,21 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { getSessions, deleteSession } from '../../services/api';
+import { getSessions } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import { COLORS } from '../../theme';
 
 const TABS = ['Upcoming', 'Past', 'All'];
 
-const statusColor = {
-  Pending:   { bg: COLORS.blueBg,  text: COLORS.blue  },
-  Confirmed: { bg: COLORS.greenBg, text: COLORS.green  },
-  Completed: { bg: COLORS.greenBg, text: COLORS.green  },
-  Cancelled: { bg: COLORS.redBg,   text: COLORS.red    },
+const STATUS_COLOR = {
+  Scheduled: { bg: COLORS.blueBg,     text: COLORS.blue   },
+  Ongoing:   { bg: '#FFF3CD',          text: '#856404'     },
+  Completed: { bg: COLORS.greenBg,    text: COLORS.green  },
+  Cancelled: { bg: COLORS.redBg,      text: COLORS.red    },
 };
 
 export default function SessionsScreen({ navigation }) {
+  const { user } = useAuth();
   const [sessions,  setSessions]  = useState([]);
   const [activeTab, setActiveTab] = useState('Upcoming');
   const [loading,   setLoading]   = useState(true);
@@ -25,7 +27,7 @@ export default function SessionsScreen({ navigation }) {
 
   const fetchSessions = useCallback(async () => {
     try {
-      const { data } = await getSessions();
+      const { data } = await getSessions({ instructor: user._id });
       setSessions(data);
     } catch (err) {
       Alert.alert('Error', 'Could not load sessions');
@@ -38,28 +40,10 @@ export default function SessionsScreen({ navigation }) {
   useEffect(() => { fetchSessions(); }, [fetchSessions]);
 
   const filtered = sessions.filter((s) => {
-    if (activeTab === 'Upcoming') return s.status === 'Pending' || s.status === 'Confirmed';
+    if (activeTab === 'Upcoming') return s.status === 'Scheduled' || s.status === 'Ongoing';
     if (activeTab === 'Past')     return s.status === 'Completed' || s.status === 'Cancelled';
     return true;
   });
-
-  const handleCancel = (id) => {
-    Alert.alert('Cancel Session', 'Are you sure you want to cancel?', [
-      { text: 'No', style: 'cancel' },
-      {
-        text: 'Yes, Cancel',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteSession(id);
-            fetchSessions();
-          } catch {
-            Alert.alert('Error', 'Could not cancel session');
-          }
-        },
-      },
-    ]);
-  };
 
   if (loading) return <View style={styles.center}><ActivityIndicator size="large" color={COLORS.brandOrange} /></View>;
 
@@ -67,12 +51,9 @@ export default function SessionsScreen({ navigation }) {
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <View style={styles.header}>
         <Text style={styles.title}>My Sessions</Text>
-        <TouchableOpacity
-          style={styles.addBtn}
-          onPress={() => navigation.navigate('BookSession', { onBack: fetchSessions })}
-        >
-          <Ionicons name="add" size={22} color={COLORS.black} />
-        </TouchableOpacity>
+        <View style={styles.countBadge}>
+          <Text style={styles.countText}>{sessions.length} total</Text>
+        </View>
       </View>
 
       {/* Tabs */}
@@ -95,38 +76,58 @@ export default function SessionsScreen({ navigation }) {
         {filtered.length === 0 ? (
           <View style={styles.empty}>
             <Ionicons name="calendar-outline" size={48} color={COLORS.brandOrange} />
-            <Text style={styles.emptyTitle}>No sessions found</Text>
-            <TouchableOpacity style={styles.bookBtn} onPress={() => navigation.navigate('BookSession')}>
-              <Text style={styles.bookBtnText}>Book a Session</Text>
-            </TouchableOpacity>
+            <Text style={styles.emptyTitle}>
+              {activeTab === 'Upcoming' ? 'No upcoming sessions' : activeTab === 'Past' ? 'No past sessions' : 'No sessions assigned'}
+            </Text>
           </View>
         ) : (
           filtered.map((s) => {
-            const colors = statusColor[s.status] || { bg: COLORS.gray, text: COLORS.textMuted };
+            const colors = STATUS_COLOR[s.status] || { bg: COLORS.gray, text: COLORS.textMuted };
+            const spots   = s.maxStudents - (s.enrolledStudents?.length || 0);
             return (
               <View key={s._id} style={styles.card}>
                 <View style={styles.cardTop}>
-                  <View>
-                    <Text style={styles.sessionType}>{s.type} Session</Text>
-                    <Text style={styles.sessionDate}>
-                      {new Date(s.date).toDateString()} · {s.startTime} – {s.endTime}
-                    </Text>
-                    <Text style={styles.sessionMeta}>Instructor: {s.instructor?.name || 'TBA'}</Text>
-                    {s.vehicle && (
-                      <Text style={styles.sessionMeta}>
-                        Vehicle: {s.vehicle.make} {s.vehicle.model}
+                  <View style={styles.cardLeft}>
+                    <View style={styles.typePill}>
+                      <Ionicons
+                        name={s.sessionType === 'Theory' ? 'book-outline' : 'car-outline'}
+                        size={12}
+                        color={s.sessionType === 'Theory' ? COLORS.blue : COLORS.black}
+                      />
+                      <Text style={[styles.typeText, { color: s.sessionType === 'Theory' ? COLORS.blue : COLORS.black }]}>
+                        {s.sessionType}
                       </Text>
-                    )}
+                    </View>
+                    <Text style={styles.sessionDate}>
+                      {new Date(s.date).toDateString()}
+                    </Text>
+                    <Text style={styles.sessionTime}>{s.startTime} – {s.endTime}</Text>
                   </View>
                   <View style={[styles.badge, { backgroundColor: colors.bg }]}>
                     <Text style={[styles.badgeText, { color: colors.text }]}>{s.status}</Text>
                   </View>
                 </View>
-                {(s.status === 'Pending' || s.status === 'Confirmed') && (
-                  <TouchableOpacity style={styles.cancelBtn} onPress={() => handleCancel(s._id)}>
-                    <Text style={styles.cancelText}>Cancel Session</Text>
-                  </TouchableOpacity>
+
+                <View style={styles.metaRow}>
+                  <Ionicons name="people-outline" size={14} color={COLORS.textMuted} />
+                  <Text style={styles.sessionMeta}>
+                    {s.enrolledStudents?.length || 0}/{s.maxStudents} students · {spots} spot{spots !== 1 ? 's' : ''} left
+                  </Text>
+                </View>
+                {s.vehicle && (
+                  <View style={styles.metaRow}>
+                    <Ionicons name="car-outline" size={14} color={COLORS.textMuted} />
+                    <Text style={styles.sessionMeta}>
+                      {s.vehicle.brand} {s.vehicle.model} · {s.vehicle.licensePlate}
+                    </Text>
+                  </View>
                 )}
+                {s.notes ? (
+                  <View style={styles.notesRow}>
+                    <Ionicons name="document-text-outline" size={13} color={COLORS.textMuted} />
+                    <Text style={styles.notesText} numberOfLines={2}>{s.notes}</Text>
+                  </View>
+                ) : null}
               </View>
             );
           })
@@ -151,11 +152,8 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 24,
   },
   title:         { fontSize: 24, fontWeight: '600', color: COLORS.black },
-  addBtn: {
-    backgroundColor: COLORS.brandYellow,
-    borderRadius: 12,
-    padding: 8,
-  },
+  countBadge:    { backgroundColor: COLORS.brandYellow, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 5 },
+  countText:     { fontSize: 12, fontWeight: '700', color: COLORS.black },
   tabBar: {
     flexDirection: 'row',
     backgroundColor: COLORS.bgLight,
@@ -171,13 +169,6 @@ const styles = StyleSheet.create({
   content:       { padding: 20, paddingBottom: 40 },
   empty:         { alignItems: 'center', paddingVertical: 60, gap: 12 },
   emptyTitle:    { fontSize: 16, fontWeight: '500', color: COLORS.textMuted },
-  bookBtn: {
-    backgroundColor: COLORS.brandOrange,
-    borderRadius: 12,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-  },
-  bookBtnText: { color: COLORS.white, fontWeight: '600', fontSize: 14 },
   card: {
     backgroundColor: COLORS.white,
     borderRadius: 16,
@@ -186,24 +177,21 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
   },
-  cardTop:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  sessionType: { fontSize: 16, fontWeight: '600', color: COLORS.black, marginBottom: 4 },
-  sessionDate: { fontSize: 13, fontWeight: '500', color: COLORS.textDark },
-  sessionMeta: { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
+  cardTop:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },
+  cardLeft:    { flex: 1 },
+  typePill:    { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, backgroundColor: COLORS.bgLight, marginBottom: 6 },
+  typeText:    { fontSize: 11, fontWeight: '700' },
+  sessionDate: { fontSize: 14, fontWeight: '700', color: COLORS.black },
+  sessionTime: { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
+  metaRow:     { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
+  sessionMeta: { fontSize: 12, color: COLORS.textMuted },
+  notesRow:    { flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginTop: 8, padding: 8, backgroundColor: COLORS.bgLight, borderRadius: 8 },
+  notesText:   { flex: 1, fontSize: 12, color: COLORS.textMuted },
   badge: {
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 4,
     alignSelf: 'flex-start',
   },
-  badgeText:  { fontSize: 11, fontWeight: '700' },
-  cancelBtn: {
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: COLORS.red,
-    borderRadius: 10,
-    paddingVertical: 8,
-    alignItems: 'center',
-  },
-  cancelText: { color: COLORS.red, fontWeight: '600', fontSize: 13 },
+  badgeText:   { fontSize: 11, fontWeight: '700' },
 });

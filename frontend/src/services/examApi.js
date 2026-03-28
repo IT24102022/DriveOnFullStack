@@ -32,6 +32,7 @@ export const getStudentProgress = (studentId) => api.get(`/exam-progress/student
 export const updateStudentProgress = (studentId, data) => 
   api.post(`/exam-progress/students/${studentId}/update`, data);
 export const getProgressStats = () => api.get('/exam-progress/stats');
+export const recalculateAllProgress = () => api.post('/exam-progress/recalculate-all');
 
 // ── Attendance ────────────────────────────────────────────────────────────────────
 export const getAttendanceRecords = (params) => api.get('/exam-attendance', { params });

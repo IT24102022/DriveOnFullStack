@@ -36,6 +36,10 @@ export default function StudentHomeScreen({ navigation }) {
     } catch {}
   };
 
+  const today = new Date().toLocaleDateString('en-US', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+  });
+
   if (loading) return <View style={styles.center}><ActivityIndicator size="large" color={COLORS.brandOrange} /></View>;
 
   const upcomingSessions = student?.bookedSessions?.filter(
@@ -54,11 +58,14 @@ export default function StudentHomeScreen({ navigation }) {
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.logo}>
-          <Text style={{ color: COLORS.black }}>Drive</Text>
-          <Text style={{ color: COLORS.brandOrange }}>O</Text>
-          <Text style={{ color: COLORS.black }}>n</Text>
-        </Text>
+        <View>
+          <Text style={styles.logo}>
+            <Text style={{ color: COLORS.black }}>Drive</Text>
+            <Text style={{ color: COLORS.brandOrange }}>O</Text>
+            <Text style={{ color: COLORS.black }}>n</Text>
+          </Text>
+          <Text style={styles.dateText}>{today}</Text>
+        </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <TouchableOpacity
             style={styles.bellBtn}
@@ -75,7 +82,6 @@ export default function StudentHomeScreen({ navigation }) {
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.welcome}>Hello, {(student?.firstName || user?.name || 'Student').split(' ')[0]} 👋</Text>
-        <Text style={styles.subtitle}>Here's your learning dashboard.</Text>
 
         {/* Profile card */}
         <View style={styles.profileCard}>
@@ -129,26 +135,45 @@ export default function StudentHomeScreen({ navigation }) {
           />
         </View>
 
-        {/* Quick Actions */}
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
-        <View style={styles.actionsGrid}>
-          {[
-            { icon: 'school-outline',         label: 'Take Quiz',    screen: 'LearningCatalog',      color: COLORS.blueBg      },
-            { icon: 'card-outline',           label: 'Payments',     screen: 'Payments',             color: COLORS.greenBg     },
-            { icon: 'calendar-outline',       label: 'Book Session', screen: 'AvailableSessions',    color: COLORS.redBg       },
-            { icon: 'notifications-outline',  label: 'Notices',      screen: 'StudentNotifications', color: COLORS.brandYellow },
-            { icon: 'chatbubbles-outline',    label: 'My Inquiries', screen: 'StudentInquiry',       color: COLORS.purpleBg    },
-          ].map((a) => (
-            <TouchableOpacity
-              key={a.label}
-              style={[styles.actionCard, { backgroundColor: a.color }]}
-              onPress={() => navigation.navigate(a.screen)}
-            >
-              <Ionicons name={a.icon} size={26} color={COLORS.black} />
-              <Text style={styles.actionLabel}>{a.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        {/* Categorised Quick Actions */}
+        {[
+          {
+            title: 'Learning',
+            icon:  'school-outline',
+            items: [
+              { icon: 'school-outline',   label: 'Take Quiz',    screen: 'LearningCatalog',   color: COLORS.blueBg  },
+              { icon: 'calendar-outline', label: 'Book Session', screen: 'AvailableSessions', color: COLORS.redBg   },
+            ],
+          },
+          {
+            title: 'Account & Support',
+            icon:  'person-circle-outline',
+            items: [
+              { icon: 'card-outline',          label: 'Payments',     screen: 'Payments',             color: COLORS.greenBg,    tab: true },
+              { icon: 'notifications-outline', label: 'Notices',      screen: 'StudentNotifications', color: COLORS.brandYellow },
+              { icon: 'chatbubbles-outline',   label: 'My Inquiries', screen: 'StudentInquiry',       color: COLORS.purpleBg    },
+            ],
+          },
+        ].map((group) => (
+          <View key={group.title} style={styles.groupBlock}>
+            <View style={styles.groupHeader}>
+              <Ionicons name={group.icon} size={15} color={COLORS.brandOrange} />
+              <Text style={styles.groupTitle}>{group.title}</Text>
+            </View>
+            <View style={styles.actionsGrid}>
+              {group.items.map((a) => (
+                <TouchableOpacity
+                  key={a.label}
+                  style={[styles.actionCard, { backgroundColor: a.color }]}
+                  onPress={() => a.tab ? navigation.jumpTo(a.screen) : navigation.navigate(a.screen)}
+                >
+                  <Ionicons name={a.icon} size={24} color={COLORS.black} />
+                  <Text style={styles.actionLabel}>{a.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        ))}
 
         {/* Enrolled Courses */}
         {student?.enrolledCourses?.length > 0 && (
@@ -191,12 +216,12 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 24, borderBottomRightRadius: 24,
   },
   logo:          { fontSize: 28, fontWeight: '800' },
+  dateText:      { fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
   bellBtn:       { backgroundColor: COLORS.white, borderRadius: 10, padding: 8 },
   studentBadge:  { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.brandYellow, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6 },
   studentBadgeText: { fontSize: 12, fontWeight: '700', color: COLORS.black },
   content:       { padding: 20, paddingBottom: 40 },
-  welcome:       { fontSize: 22, fontWeight: '700', color: COLORS.black, marginTop: 4 },
-  subtitle:      { fontSize: 13, color: COLORS.textMuted, marginBottom: 20 },
+  welcome:       { fontSize: 22, fontWeight: '700', color: COLORS.black, marginTop: 4, marginBottom: 20 },
   profileCard:   { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: COLORS.brandYellow, borderRadius: 20, padding: 16, marginBottom: 24 },
   avatar:        { width: 52, height: 52, borderRadius: 26, backgroundColor: 'rgba(255,255,255,0.6)', alignItems: 'center', justifyContent: 'center' },
   avatarText:    { fontSize: 22, fontWeight: '800', color: COLORS.black },
@@ -214,8 +239,11 @@ const styles = StyleSheet.create({
   reminderTitle: { fontSize: 14, fontWeight: '600', color: COLORS.black },
   reminderSub:   { fontSize: 12, color: COLORS.textMuted },
   sectionTitle:  { fontSize: 16, fontWeight: '700', color: COLORS.black, marginBottom: 12 },
-  actionsGrid:   { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 24 },
-  actionCard:    { width: '47%', borderRadius: 16, padding: 18, alignItems: 'center', gap: 8 },
+  groupBlock:    { marginBottom: 20 },
+  groupHeader:   { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 },
+  groupTitle:    { fontSize: 14, fontWeight: '700', color: COLORS.black },
+  actionsGrid:   { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  actionCard:    { width: '47%', borderRadius: 16, padding: 16, alignItems: 'center', gap: 8 },
   actionLabel:   { fontSize: 13, fontWeight: '700', color: COLORS.black },
   courseCard:    { backgroundColor: COLORS.white, borderRadius: 14, borderWidth: 1, borderColor: COLORS.border, padding: 14, marginBottom: 10 },
   courseCategory:{ fontSize: 13, fontWeight: '700', color: COLORS.black, marginBottom: 8 },

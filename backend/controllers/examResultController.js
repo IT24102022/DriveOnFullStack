@@ -302,44 +302,56 @@ const getResultStats = async (req, res) => {
 };
 
 // Helper function to update student progress
-const updateStudentProgressHandler = async (studentId, updateType) => {
+const updateStudentProgressHandler = async (studentId) => {
   try {
-    // This would call the progress controller
-    // Implementation depends on your architecture
     const StudentProgress = require('../models/StudentProgress');
-    
+
+    const mapStatus = (raw) => {
+      if (raw === 'Pass')   return 'Passed';
+      if (raw === 'Fail')   return 'Failed';
+      if (raw === 'Passed' || raw === 'Failed') return raw;
+      return 'Not Attempted';
+    };
+
     // Get latest results
     const [latestTheoryResult, latestPracticalResult] = await Promise.all([
-      ExamResult.findOne({ student: studentId, theoryExam: { $exists: true } })
+      ExamResult.findOne({ student: studentId, theoryExam: { $ne: null, $exists: true } })
         .sort({ recordedDate: -1 }),
-      ExamResult.findOne({ student: studentId, practicalExam: { $exists: true } })
+      ExamResult.findOne({ student: studentId, practicalExam: { $ne: null, $exists: true } })
         .sort({ recordedDate: -1 })
     ]);
 
-    // Update progress based on results
+    // Count total attempts
+    const [theoryAttempts, practicalAttempts] = await Promise.all([
+      ExamResult.countDocuments({ student: studentId, theoryExam: { $ne: null, $exists: true } }),
+      ExamResult.countDocuments({ student: studentId, practicalExam: { $ne: null, $exists: true } })
+    ]);
+
+    // Determine overall status
     let overallStatus = 'In Progress';
-    
-    if (latestPracticalResult && latestPracticalResult.status === 'Pass') {
+    if (latestPracticalResult?.status === 'Pass') {
       overallStatus = 'Completed';
-    } else if (latestTheoryResult && latestTheoryResult.status === 'Pass') {
+    } else if (latestTheoryResult?.status === 'Pass') {
       overallStatus = 'Theory Passed';
     }
 
     await StudentProgress.findOneAndUpdate(
       { student: studentId },
-      { 
+      {
         overallStatus,
         lastUpdated: new Date(),
         ...(latestTheoryResult && {
-          theoryExamStatus: latestTheoryResult.status,
+          theoryExamStatus:   mapStatus(latestTheoryResult.status),
+          theoryExamAttempts: theoryAttempts,
           lastTheoryExamDate: latestTheoryResult.recordedDate
         }),
         ...(latestPracticalResult && {
-          practicalExamStatus: latestPracticalResult.status,
+          practicalExamStatus:   mapStatus(latestPracticalResult.status),
+          practicalExamAttempts: practicalAttempts,
           lastPracticalExamDate: latestPracticalResult.recordedDate
         })
       },
-      { upsert: true }
+      { upsert: true, runValidators: true }
     );
   } catch (error) {
     console.error('Error updating student progress:', error);

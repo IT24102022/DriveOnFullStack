@@ -99,17 +99,29 @@ import SendNoticeScreen from '../screens/admin/SendNoticeScreen';
 const Tab   = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
-function TabBar({ icons, iconsActive, state, navigation }) {
+function TabBar({ icons, iconsActive, state, navigation, insets }) {
+  const bottomPad = Math.max(insets?.bottom ?? 0, 12);
   return (
-    <View style={styles.tabBar}>
+    <View style={[styles.tabBar, { paddingBottom: bottomPad }]}>
       {state.routes.map((route, index) => {
         const isFocused = state.index === index;
         return (
-          <TouchableOpacity key={route.key} style={styles.tabItem} onPress={() => { if (!isFocused) navigation.navigate(route.name); }}>
-            <View style={[styles.iconWrap, isFocused && styles.iconWrapActive]}>
-              <Ionicons name={isFocused ? iconsActive[index] : icons[index]} size={22} color={isFocused ? COLORS.black : 'rgba(0,0,0,0.4)'} />
+          <TouchableOpacity
+            key={route.key}
+            style={styles.tabItem}
+            onPress={() => { if (!isFocused) navigation.navigate(route.name); }}
+            activeOpacity={0.75}
+          >
+            <View style={[styles.iconBubble, isFocused && styles.iconBubbleActive]}>
+              <Ionicons
+                name={isFocused ? iconsActive[index] : icons[index]}
+                size={21}
+                color={isFocused ? COLORS.white : COLORS.darkGray}
+              />
             </View>
-            <Text style={[styles.tabLabel, isFocused && styles.tabLabelActive]}>{route.name}</Text>
+            <Text style={[styles.tabLabel, isFocused && styles.tabLabelActive]}>
+              {route.name}
+            </Text>
           </TouchableOpacity>
         );
       })}
@@ -237,6 +249,8 @@ export default function AppNavigator() {
         <Stack.Screen name="StaffPerformance"   component={StaffPerformanceScreen} />
         <Stack.Screen name="InquiryManagement" component={InquiryManagementScreen} />
         <Stack.Screen name="SendNotice"        component={SendNoticeScreen} />
+        <Stack.Screen name="Payments"          component={PaymentsScreen} />
+        <Stack.Screen name="AddPayment"        component={AddPaymentScreen} />
       </Stack.Navigator>
     );
   }
@@ -275,9 +289,10 @@ export default function AppNavigator() {
         animation: 'slide_from_right',
         animationTypeForReplace: 'push',
       }}>
-        <Stack.Screen name="InstructorMain" component={InstructorTabs} />
-        <Stack.Screen name="InstructorExams" component={InstructorExamsScreen} />
-        <Stack.Screen name="InstructorExamDetails" component={InstructorExamDetailsScreen} />
+        <Stack.Screen name="InstructorMain"          component={InstructorTabs} />
+        <Stack.Screen name="InstructorNotifications" component={InstructorNotificationsScreen} />
+        <Stack.Screen name="InstructorExams"         component={InstructorExamsScreen} />
+        <Stack.Screen name="InstructorExamDetails"   component={InstructorExamDetailsScreen} />
       </Stack.Navigator>
     );
   }
@@ -305,11 +320,23 @@ export default function AppNavigator() {
 }
 
 const styles = StyleSheet.create({
-  tabBar:         { backgroundColor: COLORS.brandYellow, borderTopLeftRadius: 24, borderTopRightRadius: 24, flexDirection: 'row', paddingTop: 8, paddingBottom: 20, paddingHorizontal: 4 },
-  tabItem:        { flex: 1, alignItems: 'center', gap: 2 },
-  iconWrap:       { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
-  iconWrapActive: { backgroundColor: COLORS.white },
-  tabLabel:       { fontSize: 10, fontWeight: '500', color: 'rgba(0,0,0,0.4)' },
-  tabLabelActive: { color: COLORS.black, fontWeight: '600' },
-  center:         { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  tabBar: {
+    flexDirection:        'row',
+    backgroundColor:      COLORS.white,
+    paddingTop:           10,
+    paddingHorizontal:    8,
+    borderTopLeftRadius:  28,
+    borderTopRightRadius: 28,
+    shadowColor:          '#000',
+    shadowOffset:         { width: 0, height: -4 },
+    shadowOpacity:        0.08,
+    shadowRadius:         12,
+    elevation:            14,
+  },
+  tabItem:         { flex: 1, alignItems: 'center', paddingVertical: 4, gap: 4 },
+  iconBubble:      { width: 46, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  iconBubbleActive:{ backgroundColor: COLORS.brandOrange },
+  tabLabel:        { fontSize: 10, fontWeight: '500', color: COLORS.darkGray },
+  tabLabelActive:  { fontSize: 10, fontWeight: '700', color: COLORS.brandOrange },
+  center:          { flex: 1, justifyContent: 'center', alignItems: 'center' },
 });

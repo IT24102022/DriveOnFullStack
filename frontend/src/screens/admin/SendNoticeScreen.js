@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Alert, ScrollView,
+  ActivityIndicator, Alert, ScrollView, Keyboard, TouchableWithoutFeedback,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -62,7 +62,8 @@ export default function SendNoticeScreen({ navigation }) {
         <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {/* Audience */}
         <Text style={styles.label}>Send To</Text>
         <View style={styles.audienceGrid}>
@@ -110,6 +111,9 @@ export default function SendNoticeScreen({ navigation }) {
           multiline
           numberOfLines={6}
           textAlignVertical="top"
+          blurOnSubmit
+          returnKeyType="done"
+          onSubmitEditing={Keyboard.dismiss}
         />
 
         {/* Preview */}
@@ -136,6 +140,7 @@ export default function SendNoticeScreen({ navigation }) {
           }
         </TouchableOpacity>
       </ScrollView>
+      </TouchableWithoutFeedback>
     </SafeAreaView>
   );
 }

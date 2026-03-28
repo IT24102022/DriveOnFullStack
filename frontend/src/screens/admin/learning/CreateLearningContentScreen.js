@@ -1,13 +1,34 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Alert, SafeAreaView,
+  ActivityIndicator, Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../../theme';
+import { getLearningTopics, getLearningLessons } from '../../../services/learningApi';
 
 export default function CreateLearningContentScreen({ navigation }) {
-  const [loading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [topicCount, setTopicCount] = useState(0);
+  const [lessonCount, setLessonCount] = useState(0);
+
+  const loadCounts = useCallback(async () => {
+    try {
+      const [topics, lessons] = await Promise.all([
+        getLearningTopics(),
+        getLearningLessons(),
+      ]);
+      setTopicCount(topics.data?.length || 0);
+      setLessonCount(lessons.data?.length || 0);
+    } catch {
+      // counts stay at 0
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadCounts(); }, [loadCounts]);
 
   const contentTypes = [
     {
@@ -21,34 +42,34 @@ export default function CreateLearningContentScreen({ navigation }) {
     {
       id: 'lesson',
       title: 'Create Lesson',
-      description: 'Add video tutorials, reading materials, and quizzes',
+      description: 'Select a topic, then add lessons inside it',
       icon: 'book-outline',
       color: COLORS.green,
-      screen: 'AdminLessons',
+      screen: 'AdminTopics',
     },
     {
       id: 'quiz',
       title: 'Create Quiz',
-      description: 'Build interactive quizzes with multiple questions',
+      description: 'Select a topic → lesson, then build a quiz',
       icon: 'help-circle-outline',
       color: COLORS.brandOrange,
-      screen: 'AdminQuizBuilder',
+      screen: 'AdminTopics',
     },
     {
       id: 'video',
       title: 'Upload Video',
-      description: 'Upload video tutorials for lessons',
+      description: 'Select a topic → lesson, then upload a video',
       icon: 'videocam-outline',
       color: COLORS.red,
-      screen: 'AdminLessons',
+      screen: 'AdminTopics',
     },
     {
       id: 'material',
       title: 'Add Study Material',
-      description: 'Upload PDFs, documents, and other learning materials',
+      description: 'Select a topic → lesson, then add materials',
       icon: 'document-text-outline',
-      color: COLORS.purple || '#8B5CF6',
-      screen: 'AdminLessons',
+      color: COLORS.purple,
+      screen: 'AdminTopics',
     },
   ];
 
@@ -59,34 +80,24 @@ export default function CreateLearningContentScreen({ navigation }) {
 
   const quickActions = [
     {
-      title: 'Recent Topics',
-      subtitle: 'Continue working on recent topics',
-      icon: 'time-outline',
+      title: 'Manage Topics',
+      subtitle: 'View, create and organise learning topics',
+      icon: 'folder-outline',
       action: () => navigation.navigate('AdminTopics'),
     },
     {
-      title: 'Content Analytics',
-      subtitle: 'View quiz performance and engagement',
-      icon: 'bar-chart-outline',
-      action: () => navigation.navigate('AdminQuizAnalytics'),
+      title: 'All Lessons',
+      subtitle: 'Browse all lessons across every topic',
+      icon: 'library-outline',
+      action: () => navigation.navigate('AdminTopics'),
     },
     {
-      title: 'All Lessons',
-      subtitle: 'Manage existing lessons and materials',
-      icon: 'library-outline',
-      action: () => navigation.navigate('AdminLessons'),
+      title: 'Progress Tracking',
+      subtitle: 'Monitor student exam progress',
+      icon: 'bar-chart-outline',
+      action: () => navigation.navigate('ProgressTracking'),
     },
   ];
-
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.safe}>
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={COLORS.brandOrange} />
-        </View>
-      </SafeAreaView>
-    );
-  }
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -155,17 +166,21 @@ export default function CreateLearningContentScreen({ navigation }) {
         {/* Stats Section */}
         <View style={styles.statsCard}>
           <Text style={styles.statsTitle}>Content Overview</Text>
-          <View style={styles.statsGrid}>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>0</Text>
-              <Text style={styles.statLabel}>Topics</Text>
+          {loading ? (
+            <ActivityIndicator color={COLORS.brandOrange} style={{ marginTop: 8 }} />
+          ) : (
+            <View style={styles.statsGrid}>
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{topicCount}</Text>
+                <Text style={styles.statLabel}>Topics</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{lessonCount}</Text>
+                <Text style={styles.statLabel}>Lessons</Text>
+              </View>
             </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>0</Text>
-              <Text style={styles.statLabel}>Lessons</Text>
-            </View>
-          </View>
+          )}
         </View>
 
         {/* Help Section */}

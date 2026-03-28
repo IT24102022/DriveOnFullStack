@@ -69,7 +69,7 @@ const getStudentProgress = async (req, res) => {
     const { studentId } = req.params;
     
     // Students can only view their own progress
-    if (req.user.role === 'student' && req.user.studentId.toString() !== studentId) {
+    if (req.user.role === 'student' && req.user.id.toString() !== studentId) {
       return res.status(403).json({ message: 'Access denied' });
     }
 
@@ -205,23 +205,34 @@ const updateStudentProgress = async (req, res) => {
       newStatus = 'In Progress';
     }
 
-    // Update exam attempt counts and statuses
+    const mapStatus = (raw) => {
+      if (raw === 'Pass')   return 'Passed';
+      if (raw === 'Fail')   return 'Failed';
+      if (raw === 'Passed' || raw === 'Failed') return raw;
+      return 'Not Attempted';
+    };
+
+    // Always sync counts — resets stale values when no ExamResult records exist
+    const [theoryCount, practicalCount] = await Promise.all([
+      ExamResult.countDocuments({ student: studentId, theoryExam: { $ne: null, $exists: true } }),
+      ExamResult.countDocuments({ student: studentId, practicalExam: { $ne: null, $exists: true } })
+    ]);
+
+    progress.theoryExamAttempts    = theoryCount;
+    progress.practicalExamAttempts = practicalCount;
+
     if (latestTheoryResult) {
-      progress.theoryExamAttempts = await ExamResult.countDocuments({
-        student: studentId,
-        theoryExam: { $exists: true }
-      });
-      progress.theoryExamStatus = latestTheoryResult.status;
+      progress.theoryExamStatus   = mapStatus(latestTheoryResult.status);
       progress.lastTheoryExamDate = latestTheoryResult.recordedDate;
+    } else {
+      progress.theoryExamStatus   = 'Not Attempted';
     }
 
     if (latestPracticalResult) {
-      progress.practicalExamAttempts = await ExamResult.countDocuments({
-        student: studentId,
-        practicalExam: { $exists: true }
-      });
-      progress.practicalExamStatus = latestPracticalResult.status;
+      progress.practicalExamStatus   = mapStatus(latestPracticalResult.status);
       progress.lastPracticalExamDate = latestPracticalResult.recordedDate;
+    } else {
+      progress.practicalExamStatus   = 'Not Attempted';
     }
 
     // Update attendance stats
@@ -326,9 +337,98 @@ const getProgressStats = async (req, res) => {
   }
 };
 
+// @desc    Recalculate progress for ALL students (fixes stale/inconsistent data)
+// @route   POST /api/exam-progress/recalculate-all
+// @access  Private (Admin only)
+const recalculateAllProgress = async (req, res) => {
+  try {
+    const allProgress = await StudentProgress.find({}).select('student');
+    const studentIds  = allProgress.map(p => p.student.toString());
+
+    const mapStatus = (raw) => {
+      if (raw === 'Pass')   return 'Passed';
+      if (raw === 'Fail')   return 'Failed';
+      if (raw === 'Passed' || raw === 'Failed') return raw;
+      return 'Not Attempted';
+    };
+
+    let updated = 0;
+    let failed  = 0;
+
+    for (const studentId of studentIds) {
+      try {
+        const progress = await StudentProgress.findOne({ student: studentId });
+        if (!progress) continue;
+
+        const [latestTheoryResult, latestPracticalResult] = await Promise.all([
+          ExamResult.findOne({ student: studentId, theoryExam: { $ne: null, $exists: true } })
+            .sort({ recordedDate: -1 }),
+          ExamResult.findOne({ student: studentId, practicalExam: { $ne: null, $exists: true } })
+            .sort({ recordedDate: -1 })
+        ]);
+
+        const [theoryCount, practicalCount] = await Promise.all([
+          ExamResult.countDocuments({ student: studentId, theoryExam: { $ne: null, $exists: true } }),
+          ExamResult.countDocuments({ student: studentId, practicalExam: { $ne: null, $exists: true } })
+        ]);
+
+        const [assignedTheoryExam, assignedPracticalExam] = await Promise.all([
+          TheoryExam.findOne({ enrolledStudents: studentId, status: 'Scheduled', date: { $gte: new Date() } }),
+          PracticalExam.findOne({ enrolledStudents: studentId, status: 'Scheduled', date: { $gte: new Date() } })
+        ]);
+
+        // Recalculate overall status
+        let newStatus = progress.overallStatus;
+        if (assignedPracticalExam) {
+          newStatus = 'Assigned for Practical Exam';
+        } else if (latestPracticalResult?.status === 'Pass') {
+          newStatus = 'Completed';
+        } else if (latestTheoryResult?.status === 'Pass' && !latestPracticalResult) {
+          newStatus = 'Theory Passed';
+        } else if (assignedTheoryExam) {
+          newStatus = 'Assigned for Theory Exam';
+        } else if (latestTheoryResult || latestPracticalResult) {
+          newStatus = 'In Progress';
+        }
+
+        // Always sync — resets stale values when no ExamResult records exist
+        progress.theoryExamAttempts    = theoryCount;
+        progress.practicalExamAttempts = practicalCount;
+
+        if (latestTheoryResult) {
+          progress.theoryExamStatus   = mapStatus(latestTheoryResult.status);
+          progress.lastTheoryExamDate = latestTheoryResult.recordedDate;
+        } else {
+          progress.theoryExamStatus   = 'Not Attempted';
+        }
+
+        if (latestPracticalResult) {
+          progress.practicalExamStatus   = mapStatus(latestPracticalResult.status);
+          progress.lastPracticalExamDate = latestPracticalResult.recordedDate;
+        } else {
+          progress.practicalExamStatus   = 'Not Attempted';
+        }
+
+        progress.overallStatus = newStatus;
+        progress.lastUpdated   = new Date();
+        await progress.save();
+        updated++;
+      } catch (err) {
+        console.error(`[Recalculate] Failed for student ${studentId}:`, err.message);
+        failed++;
+      }
+    }
+
+    res.json({ message: 'Recalculation complete', updated, failed, total: studentIds.length });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getAllStudentProgress,
   getStudentProgress,
   updateStudentProgress,
+  recalculateAllProgress,
   getProgressStats
 };

@@ -10,7 +10,8 @@ import { COLORS } from '../../../theme';
 import {
   getAllStudentProgress,
   getProgressStats,
-  getStudentProgress
+  getStudentProgress,
+  recalculateAllProgress,
 } from '../../../services/examApi';
 import { useAuth } from '../../../context/AuthContext';
 
@@ -20,6 +21,7 @@ export default function ProgressTrackingScreen({ navigation }) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [recalculating, setRecalculating] = useState(false);
   const [stats, setStats] = useState(null);
   const [students, setStudents] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState(null);
@@ -29,7 +31,7 @@ export default function ProgressTrackingScreen({ navigation }) {
   const loadData = useCallback(async () => {
     try {
       if (user.role === 'student') {
-        const response = await getStudentProgress(user.studentId);
+        const response = await getStudentProgress(user._id);
         setStudentDetails(response.data);
       } else {
         const studentsResponse = await getAllStudentProgress();
@@ -60,16 +62,32 @@ export default function ProgressTrackingScreen({ navigation }) {
     loadData();
   }, [loadData]);
 
+  const handleRecalculate = async () => {
+    try {
+      setRecalculating(true);
+      const { data } = await recalculateAllProgress();
+      Alert.alert(
+        'Recalculation Complete',
+        `Updated: ${data.updated}  |  Failed: ${data.failed}  |  Total: ${data.total}`,
+        [{ text: 'OK', onPress: () => loadData() }]
+      );
+    } catch (err) {
+      Alert.alert('Error', err.response?.data?.message || 'Recalculation failed');
+    } finally {
+      setRecalculating(false);
+    }
+  };
+
   const getStatusColor = (status) => {
     switch (status) {
-      case 'Completed': return COLORS.green;
-      case 'Practical Passed': return COLORS.blue;
-      case 'Theory Passed': return COLORS.brandOrange;
-      case 'Assigned for Practical Exam': return COLORS.purple;
-      case 'Assigned for Theory Exam': return COLORS.purple;
-      case 'In Progress': return COLORS.blueBg;
-      case 'Not Started': return COLORS.textMuted;
-      default: return COLORS.textMuted;
+      case 'Completed':                  return COLORS.green;
+      case 'Practical Passed':           return COLORS.blue;
+      case 'Theory Passed':              return COLORS.brandOrange;
+      case 'Assigned for Practical Exam':return COLORS.purple;
+      case 'Assigned for Theory Exam':   return COLORS.purple;
+      case 'In Progress':                return COLORS.blue;
+      case 'Not Started':                return COLORS.darkGray;
+      default:                           return COLORS.darkGray;
     }
   };
 
@@ -114,14 +132,21 @@ export default function ProgressTrackingScreen({ navigation }) {
     >
       <View style={styles.studentHeader}>
         <View style={styles.studentInfo}>
-          <Text style={styles.studentName}>
-            {student.student?.firstName} {student.student?.lastName}
-          </Text>
+          <View style={styles.nameRow}>
+            <Text style={styles.studentName}>
+              {student.student?.firstName} {student.student?.lastName}
+            </Text>
+            {student.student?.accountStatus && student.student.accountStatus !== 'Active' && (
+              <View style={styles.suspendedBadge}>
+                <Text style={styles.suspendedText}>{student.student.accountStatus}</Text>
+              </View>
+            )}
+          </View>
           <Text style={styles.studentEmail}>{student.student?.email}</Text>
           <Text style={styles.studentContact}>{student.student?.contactNo}</Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: getStatusColor(student.overallStatus) }]}>
-          <Ionicons name={getStatusIcon(student.overallStatus)} size={16} color={COLORS.white} />
+          <Ionicons name={getStatusIcon(student.overallStatus)} size={14} color={COLORS.white} />
           <Text style={styles.statusText}>{student.overallStatus}</Text>
         </View>
       </View>
@@ -129,52 +154,51 @@ export default function ProgressTrackingScreen({ navigation }) {
       <View style={styles.progressSection}>
         <View style={styles.progressItem}>
           <View style={styles.progressHeader}>
-            <Text style={styles.progressLabel}>Theory</Text>
+            <Text style={styles.progressLabel}>Theory ({student.theoryExamAttempts} attempt{student.theoryExamAttempts !== 1 ? 's' : ''})</Text>
             <Text style={styles.progressValue}>{student.theoryExamStatus}</Text>
           </View>
           {renderProgressBar(
-            student.theoryExamAttempts,
-            Math.max(student.theoryExamAttempts, 1),
+            student.theoryAttendanceRate || 0,
+            100,
             student.theoryExamStatus === 'Passed' ? COLORS.green : COLORS.brandOrange
           )}
-          <Text style={styles.progressAttempts}>
-            {student.theoryExamAttempts} attempt{student.theoryExamAttempts !== 1 ? 's' : ''}
-          </Text>
+          <Text style={styles.progressAttempts}>{student.theoryAttendanceRate || 0}% attendance</Text>
         </View>
 
         <View style={styles.progressItem}>
           <View style={styles.progressHeader}>
-            <Text style={styles.progressLabel}>Practical</Text>
+            <Text style={styles.progressLabel}>Practical ({student.practicalExamAttempts} attempt{student.practicalExamAttempts !== 1 ? 's' : ''})</Text>
             <Text style={styles.progressValue}>{student.practicalExamStatus}</Text>
           </View>
           {renderProgressBar(
-            student.practicalExamAttempts,
-            Math.max(student.practicalExamAttempts, 1),
+            student.practicalAttendanceRate || 0,
+            100,
             student.practicalExamStatus === 'Passed' ? COLORS.green : COLORS.blue
           )}
-          <Text style={styles.progressAttempts}>
-            {student.practicalExamAttempts} attempt{student.practicalExamAttempts !== 1 ? 's' : ''}
-          </Text>
+          <Text style={styles.progressAttempts}>{student.practicalAttendanceRate || 0}% attendance</Text>
         </View>
       </View>
 
       <View style={styles.attendanceSection}>
         <View style={styles.attendanceItem}>
-          <Ionicons name="book-outline" size={16} color={COLORS.brandOrange} />
-          <Text style={styles.attendanceLabel}>Theory Attendance</Text>
-          <Text style={styles.attendanceValue}>{student.theoryAttendanceRate}%</Text>
+          <Ionicons name="calendar-outline" size={14} color={COLORS.textMuted} />
+          <Text style={styles.attendanceLabel}>
+            {student.totalSessionsAttended}/{student.totalSessionsBooked} sessions
+          </Text>
         </View>
         <View style={styles.attendanceItem}>
-          <Ionicons name="car-outline" size={16} color={COLORS.blue} />
-          <Text style={styles.attendanceLabel}>Practical Attendance</Text>
-          <Text style={styles.attendanceValue}>{student.practicalAttendanceRate}%</Text>
+          <Ionicons name="time-outline" size={14} color={COLORS.textMuted} />
+          <Text style={styles.attendanceLabel}>
+            {(student.totalTheoryHours || 0) + (student.totalPracticalHours || 0)}h total
+          </Text>
         </View>
       </View>
     </TouchableOpacity>
   );
 
-  const renderStudentDetails = () => {
-    const progress = selectedStudent;
+  const renderStudentDetails = (data) => {
+    const progress = data || selectedStudent;
+    if (!progress) return null;
 
     return (
       <ScrollView style={styles.detailsContainer}>
@@ -251,36 +275,26 @@ export default function ProgressTrackingScreen({ navigation }) {
         {/* Attendance Summary */}
         <View style={styles.detailsCard}>
           <Text style={styles.detailsTitle}>Attendance Summary</Text>
-          
+
+          <View style={styles.detailsRow}>
+            <Text style={styles.detailsLabel}>Sessions Attended</Text>
+            <Text style={styles.detailsValue}>
+              {progress.totalSessionsAttended || 0} / {progress.totalSessionsBooked || 0}
+            </Text>
+          </View>
+
           <View style={styles.attendanceSummary}>
             <View style={styles.attendanceSummaryItem}>
               <Text style={styles.attendanceSummaryLabel}>Theory Sessions</Text>
-              <Text style={styles.attendanceSummaryValue}>
-                {progress.totalTheoryHours || 0} hours
-              </Text>
-              <Text style={styles.attendanceSummaryRate}>
-                {progress.theoryAttendanceRate || 0}% attendance rate
-              </Text>
-              {renderProgressBar(
-                progress.theoryAttendanceRate || 0,
-                100,
-                COLORS.brandOrange
-              )}
+              <Text style={styles.attendanceSummaryValue}>{progress.totalTheoryHours || 0} hours</Text>
+              <Text style={styles.attendanceSummaryRate}>{progress.theoryAttendanceRate || 0}% attendance rate</Text>
+              {renderProgressBar(progress.theoryAttendanceRate || 0, 100, COLORS.brandOrange)}
             </View>
-
             <View style={styles.attendanceSummaryItem}>
               <Text style={styles.attendanceSummaryLabel}>Practical Sessions</Text>
-              <Text style={styles.attendanceSummaryValue}>
-                {progress.totalPracticalHours || 0} hours
-              </Text>
-              <Text style={styles.attendanceSummaryRate}>
-                {progress.practicalAttendanceRate || 0}% attendance rate
-              </Text>
-              {renderProgressBar(
-                progress.practicalAttendanceRate || 0,
-                100,
-                COLORS.blue
-              )}
+              <Text style={styles.attendanceSummaryValue}>{progress.totalPracticalHours || 0} hours</Text>
+              <Text style={styles.attendanceSummaryRate}>{progress.practicalAttendanceRate || 0}% attendance rate</Text>
+              {renderProgressBar(progress.practicalAttendanceRate || 0, 100, COLORS.blue)}
             </View>
           </View>
         </View>
@@ -309,7 +323,11 @@ export default function ProgressTrackingScreen({ navigation }) {
           <View style={{ width: 24 }} />
         </View>
 
-        {renderStudentDetails()}
+        {studentDetails ? renderStudentDetails(studentDetails) : (
+          <View style={styles.center}>
+            <Text style={{ color: COLORS.textMuted }}>No progress data available</Text>
+          </View>
+        )}
       </SafeAreaView>
     );
   }
@@ -321,7 +339,16 @@ export default function ProgressTrackingScreen({ navigation }) {
           <Ionicons name="arrow-back" size={24} color={COLORS.black} />
         </TouchableOpacity>
         <Text style={styles.title}>Progress Tracking</Text>
-        <View style={{ width: 24 }} />
+        <TouchableOpacity
+          onPress={handleRecalculate}
+          disabled={recalculating}
+          style={styles.recalcBtn}
+        >
+          {recalculating
+            ? <ActivityIndicator size="small" color={COLORS.black} />
+            : <Ionicons name="refresh-outline" size={20} color={COLORS.black} />
+          }
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -406,7 +433,7 @@ export default function ProgressTrackingScreen({ navigation }) {
               <Text style={styles.modalTitle}>Student Details</Text>
               <View style={{ width: 24 }} />
             </View>
-            {renderStudentDetails()}
+            {renderStudentDetails(selectedStudent)}
           </SafeAreaView>
         </View>
       )}
@@ -430,6 +457,7 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 24,
   },
   title: { fontSize: 18, fontWeight: '700', color: COLORS.black, flex: 1, textAlign: 'center' },
+  recalcBtn: { backgroundColor: COLORS.brandYellow, borderRadius: 10, padding: 8 },
   statsSection: { padding: 20 },
   sectionTitle: { fontSize: 18, fontWeight: '600', color: COLORS.black, marginBottom: 16 },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
@@ -494,7 +522,10 @@ const styles = StyleSheet.create({
     marginBottom: 16
   },
   studentInfo: { flex: 1 },
+  nameRow:       { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   studentName: { fontSize: 16, fontWeight: '600', color: COLORS.black },
+  suspendedBadge: { backgroundColor: COLORS.redBg, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  suspendedText:  { fontSize: 10, fontWeight: '700', color: COLORS.red },
   studentEmail: { fontSize: 12, color: COLORS.textMuted, marginTop: 4 },
   studentContact: { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
   statusBadge: {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet,
-  TextInput, ActivityIndicator, Alert, RefreshControl, Modal, ScrollView,
+  TextInput, ActivityIndicator, Alert, RefreshControl, Modal, ScrollView, Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -179,6 +179,9 @@ export default function InquiryManagementScreen({ navigation }) {
                       multiline
                       numberOfLines={4}
                       textAlignVertical="top"
+                      blurOnSubmit
+                      returnKeyType="done"
+                      onSubmitEditing={Keyboard.dismiss}
                     />
                     <TouchableOpacity style={styles.replyBtn} onPress={handleReply} disabled={submitting}>
                       {submitting

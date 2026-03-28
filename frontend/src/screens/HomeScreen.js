@@ -42,7 +42,7 @@ export default function HomeScreen({ navigation }) {
   const quickActions = [
     { icon: 'calendar-outline', label: 'Book Session', screen: 'BookSession' },
     { icon: 'school-outline',   label: 'Take Quiz',    screen: 'Learning' },
-    { icon: 'card-outline',     label: 'Pay Now',      screen: 'Payments' },
+    { icon: 'card-outline',     label: 'Pay Now',      screen: 'Payments', tab: true },
     { icon: 'person-outline',   label: 'Profile',      screen: 'Account' },
    ...(user?.role === 'admin'
   ? [
@@ -133,7 +133,7 @@ export default function HomeScreen({ navigation }) {
             <TouchableOpacity
               key={action.label}
               style={styles.actionCard}
-              onPress={() => navigation.navigate(action.screen)}
+              onPress={() => action.tab ? navigation.jumpTo(action.screen) : navigation.navigate(action.screen)}
             >
               <Ionicons name={action.icon} size={24} color={COLORS.brandOrange} />
               <Text style={styles.actionLabel}>{action.label}</Text>
