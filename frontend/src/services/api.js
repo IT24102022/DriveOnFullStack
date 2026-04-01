@@ -2,8 +2,8 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
 // ── Change this to your deployed backend URL ──────────────────────────────────
-export const BASE_URL = 'http://192.168.8.152:5000';
-// For local testing use: 'http://192.168.x.x:5000'  (your PC's local IP)
+export const BASE_URL = 'http://192.168.1.72:5000';
+// For local testing use: 'http://192.168.x.x:5000'  (your PC's local IP — run ipconfig to find it)
 // ─────────────────────────────────────────────────────────────────────────────
 
 const api = axios.create({ 

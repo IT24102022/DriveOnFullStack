@@ -43,6 +43,11 @@ export default function PaymentsScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <View style={styles.header}>
+        {navigation.canGoBack() ? (
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={24} color={COLORS.black} />
+          </TouchableOpacity>
+        ) : <View style={{ width: 24 }} />}
         <Text style={styles.title}>Payments</Text>
         <TouchableOpacity
           style={styles.addBtn}

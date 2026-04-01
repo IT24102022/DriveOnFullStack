@@ -4,16 +4,19 @@ const Payment = require('../models/Payment');
 // @route POST /api/payments
 const createPayment = async (req, res) => {
   try {
-    const { session, amount, method, reference } = req.body;
+    const { session, amount, method, reference, studentId } = req.body;
 
     if (!amount || !method) {
       return res.status(400).json({ message: 'Amount and method are required' });
     }
 
+    // Admin can specify which student; students always pay for themselves
+    const payingStudent = (req.user.role === 'admin' && studentId) ? studentId : req.user.id;
+
     const receipt = req.file ? `/uploads/${req.file.filename}` : null;
 
     const payment = await Payment.create({
-      student: req.user.id,
+      student: payingStudent,
       session, amount, method, reference, receipt,
       status: 'Completed',
       paidAt: new Date(),

@@ -25,14 +25,14 @@ import {
   deleteEnrollmentPayment,
 } from '../../services/enrollmentApi';
 import { getLicenseCategories } from '../../services/licenseCategoryApi';
-import { getVehicleClasses } from '../../services/vehicleClassApi';
+import { getAllStudents } from '../../services/studentApi';
 
 const EnrollmentManagementScreen = ({ navigation }) => {
   const [activeTab, setActiveTab] = useState('courses');
   const [courses, setCourses] = useState([]);
   const [payments, setPayments] = useState([]);
   const [licenseCategories, setLicenseCategories] = useState([]);
-  const [vehicleClasses, setVehicleClasses] = useState([]);
+  const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -41,13 +41,10 @@ const EnrollmentManagementScreen = ({ navigation }) => {
 
   // Form data for courses
   const [courseFormData, setCourseFormData] = useState({
-    name: '',
-    description: '',
+    student: '',
     licenseCategory: '',
-    vehicleClass: '',
-    duration: '',
-    totalFee: '',
-    installments: '',
+    courseFee: '',
+    discount: '',
   });
 
   // Form data for payments
@@ -66,12 +63,12 @@ const EnrollmentManagementScreen = ({ navigation }) => {
 
   const loadData = async () => {
     try {
-      const [lcRes, vcRes] = await Promise.all([
+      const [lcRes, stuRes] = await Promise.all([
         getLicenseCategories(),
-        getVehicleClasses(),
+        getAllStudents(),
       ]);
       setLicenseCategories(lcRes.data);
-      setVehicleClasses(vcRes.data);
+      setStudents(stuRes.data);
 
       if (activeTab === 'courses') {
         const { data } = await getEnrollmentCourses();
@@ -95,13 +92,10 @@ const EnrollmentManagementScreen = ({ navigation }) => {
 
   const resetCourseForm = () => {
     setCourseFormData({
-      name: '',
-      description: '',
+      student: '',
       licenseCategory: '',
-      vehicleClass: '',
-      duration: '',
-      totalFee: '',
-      installments: '',
+      courseFee: '',
+      discount: '',
     });
     setEditingItem(null);
     setShowAddForm(false);
@@ -122,13 +116,10 @@ const EnrollmentManagementScreen = ({ navigation }) => {
 
   const handleEditCourse = (course) => {
     setCourseFormData({
-      name: course.name || '',
-      description: course.description || '',
+      student: course.student?._id || '',
       licenseCategory: course.licenseCategory?._id || '',
-      vehicleClass: course.vehicleClass?._id || '',
-      duration: course.duration?.toString() || '',
-      totalFee: course.totalFee?.toString() || '',
-      installments: course.installments?.toString() || '',
+      courseFee: course.courseFee?.toString() || '',
+      discount: course.discount?.toString() || '',
     });
     setEditingItem(course);
     setShowAddForm(true);
@@ -148,18 +139,18 @@ const EnrollmentManagementScreen = ({ navigation }) => {
   };
 
   const handleSubmitCourse = async () => {
-    if (!courseFormData.name.trim() || !courseFormData.licenseCategory) {
-      Alert.alert('Error', 'Course name and license category are required');
+    if (!courseFormData.student || !courseFormData.licenseCategory || !courseFormData.courseFee) {
+      Alert.alert('Error', 'Student, license category and course fee are required');
       return;
     }
 
     setSubmitting(true);
     try {
       const submitData = {
-        ...courseFormData,
-        duration: parseInt(courseFormData.duration) || 0,
-        totalFee: parseFloat(courseFormData.totalFee) || 0,
-        installments: parseInt(courseFormData.installments) || 1,
+        student: courseFormData.student,
+        licenseCategory: courseFormData.licenseCategory,
+        courseFee: parseFloat(courseFormData.courseFee) || 0,
+        discount: parseFloat(courseFormData.discount) || 0,
       };
 
       if (editingItem) {
@@ -251,22 +242,22 @@ const EnrollmentManagementScreen = ({ navigation }) => {
   };
 
   const getLicenseCategoryName = (categoryId) => {
-    const category = licenseCategories.find((c) => c._id === categoryId);
-    return category ? category.name : 'N/A';
+    const category = licenseCategories.find((c) => c._id === (categoryId?._id || categoryId));
+    return category ? category.licenseCategoryName : 'N/A';
   };
 
-  const getVehicleClassName = (classId) => {
-    const vehicleClass = vehicleClasses.find((c) => c._id === classId);
-    return vehicleClass ? vehicleClass.name : 'N/A';
+  const getStudentName = (student) => {
+    if (!student) return 'N/A';
+    return `${student.firstName || ''} ${student.lastName || ''}`.trim() || 'N/A';
   };
 
   const renderCourseItem = (course) => (
     <View key={course._id} style={styles.card}>
       <View style={styles.cardHeader}>
         <View style={styles.itemInfo}>
-          <Text style={styles.itemTitle}>{course.name}</Text>
+          <Text style={styles.itemTitle}>{getStudentName(course.student)}</Text>
           <Text style={styles.itemSubtitle}>
-            {getLicenseCategoryName(course.licenseCategory?._id)} - {getVehicleClassName(course.vehicleClass?._id)}
+            {getLicenseCategoryName(course.licenseCategory)}
           </Text>
         </View>
         <View style={styles.itemActions}>
@@ -285,22 +276,18 @@ const EnrollmentManagementScreen = ({ navigation }) => {
         </View>
       </View>
       
-      {course.description && (
-        <Text style={styles.description}>{course.description}</Text>
-      )}
-      
       <View style={styles.itemDetails}>
         <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Duration:</Text>
-          <Text style={styles.detailValue}>{course.duration || 0} months</Text>
+          <Text style={styles.detailLabel}>Course Fee:</Text>
+          <Text style={styles.detailValue}>Rs. {course.courseFee || 0}</Text>
         </View>
         <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Total Fee:</Text>
-          <Text style={styles.detailValue}>Rs. {course.totalFee || 0}</Text>
+          <Text style={styles.detailLabel}>Discount:</Text>
+          <Text style={styles.detailValue}>Rs. {course.discount || 0}</Text>
         </View>
         <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Installments:</Text>
-          <Text style={styles.detailValue}>{course.installments || 1}</Text>
+          <Text style={styles.detailLabel}>Remaining:</Text>
+          <Text style={styles.detailValue}>Rs. {course.remainingBalance ?? (course.courseFee - (course.discount || 0))}</Text>
         </View>
       </View>
     </View>
@@ -312,7 +299,7 @@ const EnrollmentManagementScreen = ({ navigation }) => {
         <View style={styles.itemInfo}>
           <Text style={styles.itemTitle}>Rs. {payment.amount}</Text>
           <Text style={styles.itemSubtitle}>
-            {payment.student?.name || 'N/A'} - {payment.course?.name || 'N/A'}
+            {getStudentName(payment.student)} · {getLicenseCategoryName(payment.course?.licenseCategory)}
           </Text>
         </View>
         <View style={styles.itemActions}>
@@ -415,13 +402,23 @@ const EnrollmentManagementScreen = ({ navigation }) => {
               
               {activeTab === 'courses' ? (
                 <>
-                  <Text style={styles.label}>Course Name *</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="e.g., Complete Driving Course"
-                    value={courseFormData.name}
-                    onChangeText={(text) => setCourseFormData({ ...courseFormData, name: text })}
-                  />
+                  <Text style={styles.label}>Student *</Text>
+                  <View style={styles.pickerContainer}>
+                    {students.map((s) => (
+                      <TouchableOpacity
+                        key={s._id}
+                        style={[
+                          styles.optionBtn,
+                          courseFormData.student === s._id && styles.optionBtnSelected,
+                        ]}
+                        onPress={() => setCourseFormData({ ...courseFormData, student: s._id })}
+                      >
+                        <Text style={[styles.optionBtnText, courseFormData.student === s._id && styles.optionBtnTextSelected]}>
+                          {s.firstName} {s.lastName}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
 
                   <Text style={styles.label}>License Category *</Text>
                   <View style={styles.pickerContainer}>
@@ -434,83 +431,35 @@ const EnrollmentManagementScreen = ({ navigation }) => {
                         ]}
                         onPress={() => setCourseFormData({ ...courseFormData, licenseCategory: category._id })}
                       >
-                        <Text
-                          style={[
-                            styles.optionBtnText,
-                            courseFormData.licenseCategory === category._id && styles.optionBtnTextSelected,
-                          ]}
-                        >
-                          {category.name}
+                        <Text style={[styles.optionBtnText, courseFormData.licenseCategory === category._id && styles.optionBtnTextSelected]}>
+                          {category.licenseCategoryName}
                         </Text>
                       </TouchableOpacity>
                     ))}
                   </View>
 
-                  <Text style={styles.label}>Vehicle Class</Text>
-                  <View style={styles.pickerContainer}>
-                    {vehicleClasses
-                      .filter(vc => vc.licenseCategory === courseFormData.licenseCategory)
-                      .map((vehicleClass) => (
-                        <TouchableOpacity
-                          key={vehicleClass._id}
-                          style={[
-                            styles.optionBtn,
-                            courseFormData.vehicleClass === vehicleClass._id && styles.optionBtnSelected,
-                          ]}
-                          onPress={() => setCourseFormData({ ...courseFormData, vehicleClass: vehicleClass._id })}
-                        >
-                          <Text
-                            style={[
-                              styles.optionBtnText,
-                              courseFormData.vehicleClass === vehicleClass._id && styles.optionBtnTextSelected,
-                            ]}
-                          >
-                            {vehicleClass.name}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                  </View>
-
-                  <Text style={styles.label}>Description</Text>
-                  <TextInput
-                    style={[styles.input, styles.textArea]}
-                    placeholder="Enter course description"
-                    value={courseFormData.description}
-                    onChangeText={(text) => setCourseFormData({ ...courseFormData, description: text })}
-                    multiline
-                  />
-
                   <View style={styles.row}>
                     <View style={styles.col}>
-                      <Text style={styles.label}>Duration (months)</Text>
-                      <TextInput
-                        style={styles.input}
-                        placeholder="6"
-                        value={courseFormData.duration}
-                        onChangeText={(text) => setCourseFormData({ ...courseFormData, duration: text })}
-                        keyboardType="numeric"
-                      />
-                    </View>
-                    <View style={styles.col}>
-                      <Text style={styles.label}>Total Fee (Rs.)</Text>
+                      <Text style={styles.label}>Course Fee (Rs.) *</Text>
                       <TextInput
                         style={styles.input}
                         placeholder="25000"
-                        value={courseFormData.totalFee}
-                        onChangeText={(text) => setCourseFormData({ ...courseFormData, totalFee: text })}
+                        value={courseFormData.courseFee}
+                        onChangeText={(text) => setCourseFormData({ ...courseFormData, courseFee: text })}
+                        keyboardType="numeric"
+                      />
+                    </View>
+                    <View style={styles.col}>
+                      <Text style={styles.label}>Discount (Rs.)</Text>
+                      <TextInput
+                        style={styles.input}
+                        placeholder="0"
+                        value={courseFormData.discount}
+                        onChangeText={(text) => setCourseFormData({ ...courseFormData, discount: text })}
                         keyboardType="numeric"
                       />
                     </View>
                   </View>
-
-                  <Text style={styles.label}>Installments</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="3"
-                    value={courseFormData.installments}
-                    onChangeText={(text) => setCourseFormData({ ...courseFormData, installments: text })}
-                    keyboardType="numeric"
-                  />
 
                   <View style={styles.formActions}>
                     <TouchableOpacity
@@ -538,20 +487,42 @@ const EnrollmentManagementScreen = ({ navigation }) => {
               ) : (
                 <>
                   <Text style={styles.label}>Student *</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Enter student ID or name"
-                    value={paymentFormData.student}
-                    onChangeText={(text) => setPaymentFormData({ ...paymentFormData, student: text })}
-                  />
+                  <View style={styles.pickerContainer}>
+                    {students.map((s) => (
+                      <TouchableOpacity
+                        key={s._id}
+                        style={[
+                          styles.optionBtn,
+                          paymentFormData.student === s._id && styles.optionBtnSelected,
+                        ]}
+                        onPress={() => setPaymentFormData({ ...paymentFormData, student: s._id, course: '' })}
+                      >
+                        <Text style={[styles.optionBtnText, paymentFormData.student === s._id && styles.optionBtnTextSelected]}>
+                          {s.firstName} {s.lastName}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
 
                   <Text style={styles.label}>Course *</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Enter course ID or name"
-                    value={paymentFormData.course}
-                    onChangeText={(text) => setPaymentFormData({ ...paymentFormData, course: text })}
-                  />
+                  <View style={styles.pickerContainer}>
+                    {courses
+                      .filter(c => c.student?._id === paymentFormData.student || c.student === paymentFormData.student)
+                      .map((c) => (
+                        <TouchableOpacity
+                          key={c._id}
+                          style={[
+                            styles.optionBtn,
+                            paymentFormData.course === c._id && styles.optionBtnSelected,
+                          ]}
+                          onPress={() => setPaymentFormData({ ...paymentFormData, course: c._id })}
+                        >
+                          <Text style={[styles.optionBtnText, paymentFormData.course === c._id && styles.optionBtnTextSelected]}>
+                            {getLicenseCategoryName(c.licenseCategory)} · Rs.{c.remainingBalance} left
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                  </View>
 
                   <View style={styles.row}>
                     <View style={styles.col}>

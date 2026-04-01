@@ -105,6 +105,9 @@ export default function InstructorListScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={24} color={COLORS.black} />
+        </TouchableOpacity>
         <Text style={styles.title}>Instructors</Text>
         <TouchableOpacity style={styles.addBtn} onPress={() => navigation.navigate('AddEditInstructor')}>
           <Ionicons name="add" size={22} color={COLORS.black} />

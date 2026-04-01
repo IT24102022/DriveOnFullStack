@@ -134,7 +134,7 @@ const FeedbackManagementScreen = ({ navigation }) => {
     <View key={feedback._id} style={styles.card}>
       <View style={styles.cardHeader}>
         <View style={styles.userInfo}>
-          <Text style={styles.userName}>{feedback.student?.name || 'Anonymous'}</Text>
+          <Text style={styles.userName}>{feedback.student ? `${feedback.student.firstName} ${feedback.student.lastName}` : 'Anonymous'}</Text>
           <Text style={styles.date}>
             {new Date(feedback.createdAt).toLocaleDateString()}
           </Text>

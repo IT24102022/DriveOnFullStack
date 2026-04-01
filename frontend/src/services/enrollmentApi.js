@@ -14,10 +14,4 @@ export const getEnrollmentPayments = (studentId) =>
 export const createEnrollmentPayment = (data) => api.post('/enrollment/payments', data);
 export const deleteEnrollmentPayment = (id) => api.delete(`/enrollment/payments/${id}`);
 
-// ── Student Enrollment ───────────────────────────────────────────────────────
-export const enrollStudent = (data) => api.post('/enrollment/enroll', data);
-export const updateEnrollmentStatus = (enrollmentId, status) => 
-  api.patch(`/enrollment/enroll/${enrollmentId}/status`, { status });
-export const getEnrollmentById = (enrollmentId) => api.get(`/enrollment/enroll/${enrollmentId}`);
-
 export default api;

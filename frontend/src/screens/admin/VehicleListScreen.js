@@ -95,6 +95,9 @@ export default function VehicleListScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={24} color={COLORS.black} />
+        </TouchableOpacity>
         <Text style={styles.title}>Vehicles</Text>
         <View style={styles.headerBtns}>
           <TouchableOpacity style={styles.ownersBtn} onPress={() => navigation.navigate('OwnersList')}>

@@ -19,10 +19,21 @@ export const AuthProvider = ({ children }) => {
           let endpoint = '/auth/profile';
           if (userType === 'student')    endpoint = `/students/${userId}`;
           if (userType === 'instructor') endpoint = `/instructors/${userId}`;
-          const { data } = await api.get(endpoint);
-          setUser({ ...data, role: userType });
+          try {
+            const { data } = await api.get(endpoint);
+            setUser({ ...data, role: userType });
+          } catch (error) {
+            // Only clear credentials on auth errors (401/403), not network errors
+            if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+              await SecureStore.deleteItemAsync('token');
+              await SecureStore.deleteItemAsync('userType');
+              await SecureStore.deleteItemAsync('userId');
+            }
+            // On network error: leave credentials intact, user stays on login screen
+          }
         }
       } catch {
+        // SecureStore read failure — clear all
         await SecureStore.deleteItemAsync('token');
         await SecureStore.deleteItemAsync('userType');
         await SecureStore.deleteItemAsync('userId');
@@ -37,13 +48,14 @@ export const AuthProvider = ({ children }) => {
     setSigning(true);
     let data = null;
     let role = null;
+    let lastError = null;
 
     try {
       const res = await api.post('/auth/login', { email, password });
       data = res.data;
       role = data.role || 'admin';
     } catch (error) {
-      // Silently handle admin login failure
+      lastError = error;
     }
 
     if (!data) {
@@ -52,7 +64,7 @@ export const AuthProvider = ({ children }) => {
         data = res.data;
         role = 'student';
       } catch (error) {
-        // Silently handle student login failure
+        lastError = error;
       }
     }
 
@@ -62,13 +74,19 @@ export const AuthProvider = ({ children }) => {
         data = res.data;
         role = 'instructor';
       } catch (error) {
-        // Silently handle instructor login failure
+        lastError = error;
       }
     }
 
     if (!data) {
       setSigning(false);
-      throw new Error('Invalid email or password');
+      // Distinguish network errors from credential errors
+      const isNetworkError = !lastError?.response;
+      throw new Error(
+        isNetworkError
+          ? 'Cannot connect to server. Make sure the backend is running and the IP address in api.js is correct.'
+          : 'Invalid email or password'
+      );
     }
 
     await SecureStore.setItemAsync('token',    data.token);

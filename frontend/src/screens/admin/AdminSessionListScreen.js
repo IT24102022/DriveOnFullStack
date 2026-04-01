@@ -186,6 +186,11 @@ export default function AdminSessionListScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <View style={styles.header}>
+        {navigation.canGoBack() ? (
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={24} color={COLORS.black} />
+          </TouchableOpacity>
+        ) : <View style={{ width: 24 }} />}
         <Text style={styles.title}>Sessions</Text>
         <View style={styles.headerBtns}>
           <TouchableOpacity style={styles.reportBtn} onPress={() => navigation.navigate('SessionReport')}>

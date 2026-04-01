@@ -163,6 +163,9 @@ export default function OwnersListScreen({ navigation }) {
         </TouchableOpacity>
       </Modal>
       <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={24} color={COLORS.black} />
+        </TouchableOpacity>
         <Text style={styles.title}>Owners</Text>
         <TouchableOpacity style={styles.addBtn} onPress={() => navigation.navigate('AddEditOwner')}>
           <Ionicons name="add" size={22} color={COLORS.black} />

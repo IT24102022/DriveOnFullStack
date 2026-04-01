@@ -11,7 +11,7 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:19006', 'http://192.168.8.152:19006', 'exp://192.168.8.152:8081'],
+  origin: ['http://localhost:19006', 'http://192.168.1.72:19006', 'exp://192.168.1.72:8081'],
   credentials: true
 }));
 app.use(express.json());
@@ -59,5 +59,5 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Local: http://localhost:${PORT}`);
-  console.log(`Network: http://192.168.8.152:${PORT}`);
+  console.log(`Network: http://192.168.1.72:${PORT}`);
 });

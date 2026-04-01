@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { getSessions, createPayment } from '../../services/api';
+import { getAllStudents } from '../../services/studentApi';
 import { BASE_URL } from '../../services/api';
 import { COLORS } from '../../theme';
 
@@ -14,28 +15,33 @@ const METHODS = ['Cash', 'Card', 'Bank Transfer'];
 
 export default function AddPaymentScreen({ navigation }) {
   const [sessions,   setSessions]   = useState([]);
+  const [students,   setStudents]   = useState([]);
   const [loading,    setLoading]    = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   const [amount,    setAmount]    = useState('');
   const [method,    setMethod]    = useState('Cash');
   const [sessionId, setSessionId] = useState('');
+  const [studentId, setStudentId] = useState('');
   const [reference, setReference] = useState('');
   const [receipt,   setReceipt]   = useState(null);
 
   useEffect(() => {
-    const fetchSessions = async () => {
+    const fetchData = async () => {
       try {
-        const { data } = await getSessions();
-        // Only confirmed sessions that haven't been paid
-        setSessions(data.filter(s => s.status === 'Confirmed' || s.status === 'Completed'));
+        const [sessRes, stuRes] = await Promise.all([
+          getSessions(),
+          getAllStudents(),
+        ]);
+        setSessions(sessRes.data.filter(s => s.status === 'Scheduled' || s.status === 'Completed'));
+        setStudents(stuRes.data);
       } catch {
-        console.log('Could not load sessions');
+        console.log('Could not load data');
       } finally {
         setLoading(false);
       }
     };
-    fetchSessions();
+    fetchData();
   }, []);
 
   const pickReceipt = async () => {
@@ -65,6 +71,7 @@ export default function AddPaymentScreen({ navigation }) {
       const formData = new FormData();
       formData.append('amount', amount);
       formData.append('method', method);
+      if (studentId)  formData.append('studentId', studentId);
       if (sessionId)  formData.append('session', sessionId);
       if (reference)  formData.append('reference', reference);
       if (receipt) {
@@ -138,10 +145,32 @@ export default function AddPaymentScreen({ navigation }) {
           onChangeText={setReference}
         />
 
+        {/* Student */}
+        <Text style={styles.label}>Student (required for admin) *</Text>
+        {students.length === 0 ? (
+          <Text style={styles.noSessions}>No students found</Text>
+        ) : (
+          students.map((s) => (
+            <TouchableOpacity
+              key={s._id}
+              style={[styles.sessionCard, studentId === s._id && styles.sessionCardActive]}
+              onPress={() => setStudentId(studentId === s._id ? '' : s._id)}
+            >
+              <View style={styles.flex1}>
+                <Text style={styles.sessionType}>{s.firstName} {s.lastName}</Text>
+                <Text style={styles.sessionMeta}>{s.email} · {s.NIC}</Text>
+              </View>
+              {studentId === s._id && (
+                <Ionicons name="checkmark-circle" size={22} color={COLORS.green} />
+              )}
+            </TouchableOpacity>
+          ))
+        )}
+
         {/* Link to session */}
         <Text style={styles.label}>Link to Session (optional)</Text>
         {sessions.length === 0 ? (
-          <Text style={styles.noSessions}>No confirmed sessions available</Text>
+          <Text style={styles.noSessions}>No scheduled or completed sessions available</Text>
         ) : (
           sessions.map((s) => (
             <TouchableOpacity
@@ -150,7 +179,7 @@ export default function AddPaymentScreen({ navigation }) {
               onPress={() => setSessionId(sessionId === s._id ? '' : s._id)}
             >
               <View style={styles.flex1}>
-                <Text style={styles.sessionType}>{s.type} Session</Text>
+                <Text style={styles.sessionType}>{s.sessionType} Session</Text>
                 <Text style={styles.sessionMeta}>
                   {new Date(s.date).toDateString()} · {s.startTime}
                 </Text>

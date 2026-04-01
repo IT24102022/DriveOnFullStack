@@ -95,8 +95,8 @@ const getStudentById = async (req, res) => {
       .populate({
         path: 'bookedSessions',
         populate: [
-          { path: 'instructor', select: 'name' },
-          { path: 'vehicle', select: 'make model' },
+          { path: 'instructor', select: 'fullName' },
+          { path: 'vehicle', select: 'brand model' },
         ],
       });
 

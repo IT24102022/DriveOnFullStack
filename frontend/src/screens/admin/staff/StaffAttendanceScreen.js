@@ -208,6 +208,9 @@ const StaffAttendanceScreen = ({ navigation }) => {
     <View style={styles.container}>
       <SafeAreaView style={styles.topSafeArea} edges={['top']}>
         <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={24} color={COLORS.black} />
+          </TouchableOpacity>
           <Text style={styles.title}>Staff Attendance</Text>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <TouchableOpacity

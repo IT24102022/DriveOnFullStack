@@ -26,10 +26,15 @@ const createStaff = async (req, res) => {
       });
     }
 
-    // Generate employee ID
+    // Generate employee ID — derive next number from the highest existing ID
     const year = new Date().getFullYear();
-    const staffCount = await Staff.countDocuments();
-    const employeeId = `EMP${year}${String(staffCount + 1).padStart(4, '0')}`;
+    const lastStaff = await Staff.findOne({ employeeId: new RegExp(`^EMP${year}`) }).sort({ employeeId: -1 });
+    let nextNum = 1;
+    if (lastStaff?.employeeId) {
+      const match = lastStaff.employeeId.match(/(\d{4})$/);
+      nextNum = match ? parseInt(match[1]) + 1 : 1;
+    }
+    const employeeId = `EMP${year}${String(nextNum).padStart(4, '0')}`;
 
     const staff = new Staff({
       employeeId,
