@@ -1,9 +1,22 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
+import Constants from 'expo-constants';
 
-// ── Change this to your deployed backend URL ──────────────────────────────────
-export const BASE_URL = 'http://192.168.1.72:5000';
-// For local testing use: 'http://192.168.x.x:5000'  (your PC's local IP — run ipconfig to find it)
+// ── Backend URL ───────────────────────────────────────────────────────────────
+// In development (Expo Go): auto-detects your PC's IP from the Expo dev server.
+// In production (APK/deployed): uses the Render URL below.
+// ─────────────────────────────────────────────────────────────────────────────
+const DEPLOYED_URL = 'https://driveon-backend.onrender.com'; // ← update after deploying to Render
+
+const getBaseUrl = () => {
+  if (__DEV__) {
+    const hostUri = Constants.expoConfig?.hostUri ?? Constants.manifest?.debuggerHost;
+    if (hostUri) return `http://${hostUri.split(':')[0]}:5000`;
+  }
+  return DEPLOYED_URL;
+};
+
+export const BASE_URL = getBaseUrl();
 // ─────────────────────────────────────────────────────────────────────────────
 
 const api = axios.create({ 
