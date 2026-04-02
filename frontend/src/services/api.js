@@ -6,10 +6,13 @@ import Constants from 'expo-constants';
 // In development (Expo Go): auto-detects your PC's IP from the Expo dev server.
 // In production (APK/deployed): uses the Render URL below.
 // ─────────────────────────────────────────────────────────────────────────────
-const DEPLOYED_URL = 'https://driveon-backend.onrender.com'; // ← update after deploying to Render
+const DEPLOYED_URL = 'https://driveonfullstack.onrender.com';
+
+// Set USE_LOCAL to true only when developing with a local backend
+const USE_LOCAL = false;
 
 const getBaseUrl = () => {
-  if (__DEV__) {
+  if (USE_LOCAL && __DEV__) {
     const hostUri = Constants.expoConfig?.hostUri ?? Constants.manifest?.debuggerHost;
     if (hostUri) return `http://${hostUri.split(':')[0]}:5000`;
   }
@@ -21,7 +24,7 @@ export const BASE_URL = getBaseUrl();
 
 const api = axios.create({ 
   baseURL: `${BASE_URL}/api`,
-  timeout: 10000 // Add timeout for better error handling
+  timeout: 60000 // 60s — allows Render free tier to wake up from sleep
 });
 
 // Attach JWT token to every request automatically
