@@ -6,7 +6,7 @@ import Constants from 'expo-constants';
 // Set USE_LOCAL_BACKEND to true  → connects to your local machine (port 5000)
 //                        false → connects to the online Render backend
 // ─────────────────────────────────────────────────────────────────────────────
-const USE_LOCAL_BACKEND = false; // ← toggle this
+const USE_LOCAL_BACKEND = true; // ← toggle this
 
 const DEPLOYED_URL = 'https://driveonfullstack.onrender.com';
 const LOCAL_IP = '192.168.8.152'; // ← update this if your WiFi IP changes
