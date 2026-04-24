@@ -2,121 +2,130 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  FlatList,
+  ScrollView,
   TouchableOpacity,
   StyleSheet,
   Alert,
   Modal,
-  TextInput,
-  Dimensions,
+  Platform,
   ActivityIndicator,
-  ScrollView,
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { getStaffAttendance, getStaff, markStaffAttendance } from '../../../services/api';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { COLORS } from '../../../theme';
 
-const { width } = Dimensions.get('window');
-
 const StaffAttendanceScreen = ({ navigation }) => {
-  const [attendance, setAttendance] = useState([]);
   const [staffMembers, setStaffMembers] = useState([]);
+  const [attendance, setAttendance] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [showMarkModal, setShowMarkModal] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState(null);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [checkIn, setCheckIn] = useState('');
-  const [checkOut, setCheckOut] = useState('');
+  const [selectedDate, setSelectedDate] = useState(null);
   const [status, setStatus] = useState('Present');
-  const [remarks, setRemarks] = useState('');
-  const [tasksCompleted, setTasksCompleted] = useState('0');
-  const [efficiency, setEfficiency] = useState('0');
-  const [customerRating, setCustomerRating] = useState('0');
+  const [checkIn, setCheckIn] = useState(null);
+  const [checkOut, setCheckOut] = useState(null);
+  const [showCheckInPicker, setShowCheckInPicker] = useState(false);
+  const [showCheckOutPicker, setShowCheckOutPicker] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const attendanceStatuses = ['Present', 'Absent', 'Late', 'Half Day', 'On Leave'];
-  const leaveTypes = ['Annual', 'Sick', 'Maternity', 'Paternity', 'Unpaid', 'Special'];
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [currentMonth]);
 
   const loadData = async () => {
     try {
-      // Load attendance records
-      const attendanceResponse = await getStaffAttendance({
-        month: new Date().getMonth() + 1,
-        year: new Date().getFullYear()
-      });
-      setAttendance(attendanceResponse.data.attendance || []);
-
-      // Load staff members for dropdown
-      const staffResponse = await getStaff();
-      setStaffMembers(staffResponse.data.staff || []);
+      const [staffRes, attendanceRes] = await Promise.all([
+        getStaff(),
+        getStaffAttendance({
+          month: currentMonth.getMonth() + 1,
+          year: currentMonth.getFullYear()
+        })
+      ]);
+      setStaffMembers(staffRes.data.staff || []);
+      setAttendance(attendanceRes.data.attendance || []);
     } catch (error) {
-      Alert.alert('Error', 'Failed to load attendance data');
-      console.error(error);
+      Alert.alert('Error', 'Failed to load data');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
-  const handleMarkAttendance = () => {
-    if (!selectedStaff) {
-      Alert.alert('Error', 'Please select a staff member');
-      return;
-    }
+  const getAttendanceForDate = (staffId, date) => {
+    return attendance.find(a => 
+      a.staff?._id === staffId && 
+      new Date(a.date).toDateString() === date.toDateString()
+    );
+  };
 
+  const handleDateClick = (staffMember, date) => {
+    const existing = getAttendanceForDate(staffMember._id, date);
+    setSelectedStaff(staffMember);
+    setSelectedDate(date);
+    if (existing) {
+      setStatus(existing.status);
+      setCheckIn(existing.checkIn ? new Date(existing.checkIn) : null);
+      setCheckOut(existing.checkOut ? new Date(existing.checkOut) : null);
+    } else {
+      setStatus('Present');
+      setCheckIn(null);
+      setCheckOut(null);
+    }
     setShowMarkModal(true);
   };
 
+  const formatLocalDate = (d) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  const formatTime = (date) => {
+    if (!date) return '';
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+  };
+
   const submitAttendance = async () => {
-    if (!checkIn) {
-      Alert.alert('Error', 'Please enter check-in time');
+    const requiresCheckIn = ['Late', 'Half Day'].includes(status);
+    if (requiresCheckIn && !checkIn) {
+      Alert.alert('Error', 'Check-in time is required for this status');
       return;
     }
-
     setSubmitting(true);
     try {
+      const dateStr = formatLocalDate(selectedDate);
       const attendanceData = {
-        staffId: selectedStaff,
-        date: selectedDate,
-        checkIn: `${selectedDate}T${checkIn}`,
-        checkOut: checkOut ? `${selectedDate}T${checkOut}` : undefined,
+        staffId: selectedStaff._id,
+        date: dateStr,
         status,
-        remarks,
-        performanceMetrics: {
-          tasksCompleted: parseInt(tasksCompleted) || 0,
-          efficiency: parseInt(efficiency) || 0,
-          customerRating: parseFloat(customerRating) || 0
-        }
       };
-
+      if (checkIn) {
+        const h = String(checkIn.getHours()).padStart(2, '0');
+        const m = String(checkIn.getMinutes()).padStart(2, '0');
+        attendanceData.checkIn = `${dateStr}T${h}:${m}:00`;
+      }
+      if (checkOut) {
+        const h = String(checkOut.getHours()).padStart(2, '0');
+        const m = String(checkOut.getMinutes()).padStart(2, '0');
+        attendanceData.checkOut = `${dateStr}T${h}:${m}:00`;
+      }
       await markStaffAttendance(attendanceData);
       Alert.alert('Success', 'Attendance marked successfully');
       setShowMarkModal(false);
-      resetForm();
       loadData();
     } catch (error) {
       Alert.alert('Error', error.response?.data?.message || 'Failed to mark attendance');
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const resetForm = () => {
-    setSelectedStaff(null);
-    setCheckIn('');
-    setCheckOut('');
-    setStatus('Present');
-    setRemarks('');
-    setTasksCompleted('0');
-    setEfficiency('0');
-    setCustomerRating('0');
   };
 
   const getStatusColor = (status) => {
@@ -130,71 +139,73 @@ const StaffAttendanceScreen = ({ navigation }) => {
     }
   };
 
-  const renderAttendanceItem = ({ item }) => (
-    <View style={styles.attendanceCard}>
-      <View style={styles.attendanceHeader}>
-        <View style={styles.staffInfo}>
-          <Text style={styles.staffName}>{item.staff?.fullName}</Text>
-          <Text style={styles.staffId}>{item.staff?.employeeId}</Text>
+  const generateCalendarDays = () => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startPadding = firstDay.getDay();
+    const totalDays = lastDay.getDate();
+    
+    const days = [];
+    for (let i = 0; i < startPadding; i++) {
+      days.push(null);
+    }
+    for (let i = 1; i <= totalDays; i++) {
+      days.push(new Date(year, month, i));
+    }
+    return days;
+  };
+
+  const CalendarGrid = ({ staffMember }) => {
+    const days = generateCalendarDays();
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    return (
+      <View style={styles.calendarContainer}>
+        <View style={styles.calendarHeader}>
+          {dayNames.map(day => (
+            <Text key={day} style={styles.dayName}>{day}</Text>
+          ))}
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
-          <Text style={styles.statusText}>{item.status}</Text>
+        <View style={styles.calendarGrid}>
+          {days.map((date, index) => {
+            if (!date) {
+              return <View key={index} style={styles.calendarCellEmpty} />;
+            }
+            const attendance = getAttendanceForDate(staffMember._id, date);
+            const isToday = new Date().toDateString() === date.toDateString();
+            const isFuture = date > new Date();
+
+            return (
+              <TouchableOpacity
+                key={index}
+                style={[
+                  styles.calendarCell,
+                  isToday && styles.calendarCellToday,
+                  isFuture && styles.calendarCellFuture,
+                  attendance && { backgroundColor: getStatusColor(attendance.status) + '20' }
+                ]}
+                onPress={() => !isFuture && handleDateClick(staffMember, date)}
+                disabled={isFuture}
+              >
+                <Text style={[
+                  styles.calendarCellText,
+                  isToday && styles.calendarCellTextToday,
+                  isFuture && styles.calendarCellTextFuture
+                ]}>
+                  {date.getDate()}
+                </Text>
+                {attendance && (
+                  <View style={[styles.attendanceDot, { backgroundColor: getStatusColor(attendance.status) }]} />
+                )}
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </View>
-
-      <View style={styles.attendanceDetails}>
-        <View style={styles.detailRow}>
-          <Ionicons name="calendar-outline" size={16} color={COLORS.gray} />
-          <Text style={styles.detailText}>
-            {new Date(item.date).toLocaleDateString()}
-          </Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Ionicons name="time-outline" size={16} color={COLORS.gray} />
-          <Text style={styles.detailText}>
-            {item.checkIn ? new Date(item.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'} - 
-            {item.checkOut ? new Date(item.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ' N/A'}
-          </Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Ionicons name="hourglass-outline" size={16} color={COLORS.gray} />
-          <Text style={styles.detailText}>{item.workHours || 0} hours</Text>
-        </View>
-        {item.overtimeHours > 0 && (
-          <View style={styles.detailRow}>
-            <Ionicons name="add-circle-outline" size={16} color={COLORS.brandOrange} />
-            <Text style={styles.detailText}>{item.overtimeHours} overtime</Text>
-          </View>
-        )}
-      </View>
-
-      {item.performanceMetrics && (
-        <View style={styles.performanceSection}>
-          <Text style={styles.performanceTitle}>Performance Metrics</Text>
-          <View style={styles.performanceGrid}>
-            <View style={styles.performanceItem}>
-              <Text style={styles.performanceValue}>{item.performanceMetrics.tasksCompleted}</Text>
-              <Text style={styles.performanceLabel}>Tasks</Text>
-            </View>
-            <View style={styles.performanceItem}>
-              <Text style={styles.performanceValue}>{item.performanceMetrics.efficiency}%</Text>
-              <Text style={styles.performanceLabel}>Efficiency</Text>
-            </View>
-            <View style={styles.performanceItem}>
-              <Text style={styles.performanceValue}>{item.performanceMetrics.customerRating}</Text>
-              <Text style={styles.performanceLabel}>Rating</Text>
-            </View>
-          </View>
-        </View>
-      )}
-
-      {item.remarks && (
-        <View style={styles.remarksSection}>
-          <Text style={styles.remarksText}>{item.remarks}</Text>
-        </View>
-      )}
-    </View>
-  );
+    );
+  };
 
   if (loading) {
     return (
@@ -214,41 +225,69 @@ const StaffAttendanceScreen = ({ navigation }) => {
           <Text style={styles.title}>Staff Attendance</Text>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <TouchableOpacity
-              style={styles.perfBtn}
-              onPress={() => navigation.navigate('StaffPerformance')}
+              style={styles.navBtn}
+              onPress={() => {
+                const newMonth = new Date(currentMonth);
+                newMonth.setMonth(newMonth.getMonth() - 1);
+                setCurrentMonth(newMonth);
+              }}
             >
-              <Ionicons name="bar-chart-outline" size={18} color={COLORS.black} />
-              <Text style={styles.perfBtnText}>Insights</Text>
+              <Ionicons name="chevron-back" size={20} color={COLORS.black} />
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.addBtn}
-              onPress={handleMarkAttendance}
+              style={styles.navBtn}
+              onPress={() => {
+                const newMonth = new Date(currentMonth);
+                newMonth.setMonth(newMonth.getMonth() + 1);
+                setCurrentMonth(newMonth);
+              }}
             >
-              <Ionicons name="add" size={22} color={COLORS.black} />
+              <Ionicons name="chevron-forward" size={20} color={COLORS.black} />
             </TouchableOpacity>
           </View>
         </View>
+        <View style={styles.monthHeader}>
+          <Text style={styles.monthText}>
+            {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+          </Text>
+        </View>
       </SafeAreaView>
 
-      <FlatList
-        data={attendance}
-        keyExtractor={(item) => item._id}
-        renderItem={renderAttendanceItem}
+      <ScrollView
         contentContainerStyle={styles.list}
-        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => { setRefreshing(true); loadData(); }}
           />
         }
-        ListEmptyComponent={
+      >
+        {staffMembers.length === 0 ? (
           <View style={styles.empty}>
-            <Ionicons name="calendar-outline" size={48} color={COLORS.brandOrange} />
-            <Text style={styles.emptyText}>No attendance records found</Text>
+            <Ionicons name="people-outline" size={48} color={COLORS.brandOrange} />
+            <Text style={styles.emptyText}>No staff members found</Text>
           </View>
-        }
-      />
+        ) : (
+          staffMembers.map((staffMember) => (
+            <View key={staffMember._id} style={styles.staffCard}>
+              <View style={styles.staffHeader}>
+                <View style={styles.staffInfo}>
+                  <Text style={styles.staffName}>{staffMember.fullName}</Text>
+                  <Text style={styles.staffMeta}>{staffMember.department || 'N/A'}</Text>
+                </View>
+                <View style={[styles.statusBadge, {
+                  backgroundColor: staffMember.isActive ? COLORS.greenBg : COLORS.redBg,
+                }]}>
+                  <Text style={[styles.statusText, {
+                    color: staffMember.isActive ? COLORS.green : COLORS.red,
+                  }]}>{staffMember.isActive ? 'Active' : 'Inactive'}</Text>
+                </View>
+              </View>
+              <CalendarGrid staffMember={staffMember} />
+            </View>
+          ))
+        )}
+      </ScrollView>
 
       {/* Mark Attendance Modal */}
       <Modal
@@ -259,180 +298,107 @@ const StaffAttendanceScreen = ({ navigation }) => {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={styles.modalTitle}>Mark Staff Attendance</Text>
+           <ScrollView showsVerticalScrollIndicator={false}>
+            <Text style={styles.modalTitle}>Mark Attendance</Text>
+            <Text style={styles.modalSubtitle}>
+              {selectedStaff?.fullName} - {selectedDate?.toLocaleDateString()}
+            </Text>
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Select Staff Member</Text>
-                <TouchableOpacity
-                  style={styles.dropdown}
-                  onPress={() => {
-                    Alert.alert(
-                      'Select Staff',
-                      '',
-                      staffMembers.map(staff => ({
-                        text: `${staff.fullName} (${staff.employeeId})`,
-                        onPress: () => setSelectedStaff(staff._id)
-                      }))
-                    );
-                  }}
-                >
-                  <Text style={styles.dropdownText}>
-                    {staffMembers.find(s => s._id === selectedStaff)?.fullName || 'Select Staff'}
-                  </Text>
-                  <Ionicons name="chevron-down-outline" size={20} color={COLORS.gray} />
-                </TouchableOpacity>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Status</Text>
+              <View style={styles.statusButtons}>
+                {attendanceStatuses.map(s => (
+                  <TouchableOpacity
+                    key={s}
+                    style={[styles.statusButton, status === s && styles.statusButtonActive]}
+                    onPress={() => setStatus(s)}
+                  >
+                    <Text style={[styles.statusButtonText, status === s && styles.statusButtonTextActive]}>
+                      {s}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
               </View>
+            </View>
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Date</Text>
-                <TextInput
-                  style={styles.input}
-                  value={selectedDate}
-                  onChangeText={setSelectedDate}
-                  placeholder="YYYY-MM-DD"
-                />
-              </View>
-
+            {['Late', 'Half Day'].includes(status) && (
               <View style={styles.timeRow}>
                 <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
                   <Text style={styles.label}>Check In</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={checkIn}
-                    onChangeText={setCheckIn}
-                    placeholder="09:00"
-                  />
+                  <TouchableOpacity
+                    style={styles.timePickerBtn}
+                    onPress={() => setShowCheckInPicker(true)}
+                  >
+                    <Ionicons name="time-outline" size={18} color={COLORS.brandOrange} />
+                    <Text style={[styles.timePickerText, !checkIn && { color: COLORS.textMuted }]}>
+                      {checkIn ? formatTime(checkIn) : 'Select time'}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
                 <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
                   <Text style={styles.label}>Check Out</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={checkOut}
-                    onChangeText={setCheckOut}
-                    placeholder="17:00"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Status</Text>
-                <TouchableOpacity
-                  style={styles.dropdown}
-                  onPress={() => {
-                    Alert.alert(
-                      'Select Status',
-                      '',
-                      attendanceStatuses.map(status => ({
-                        text: status,
-                        onPress: () => setStatus(status)
-                      }))
-                    );
-                  }}
-                >
-                  <Text style={styles.dropdownText}>{status}</Text>
-                  <Ionicons name="chevron-down-outline" size={20} color={COLORS.gray} />
-                </TouchableOpacity>
-              </View>
-
-              {status === 'On Leave' && (
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Leave Type</Text>
                   <TouchableOpacity
-                    style={styles.dropdown}
-                    onPress={() => {
-                      Alert.alert(
-                        'Select Leave Type',
-                        '',
-                        leaveTypes.map(type => ({
-                          text: type,
-                          onPress: () => setRemarks(type)
-                        }))
-                      );
-                    }}
+                    style={styles.timePickerBtn}
+                    onPress={() => setShowCheckOutPicker(true)}
                   >
-                    <Text style={styles.dropdownText}>{remarks || 'Select Leave Type'}</Text>
-                    <Ionicons name="chevron-down-outline" size={20} color={COLORS.gray} />
+                    <Ionicons name="time-outline" size={18} color={COLORS.brandOrange} />
+                    <Text style={[styles.timePickerText, !checkOut && { color: COLORS.textMuted }]}>
+                      {checkOut ? formatTime(checkOut) : 'Select time'}
+                    </Text>
                   </TouchableOpacity>
                 </View>
-              )}
-
-              <Text style={styles.sectionTitle}>Performance Metrics</Text>
-              
-              <View style={styles.timeRow}>
-                <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                  <Text style={styles.label}>Tasks Completed</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={tasksCompleted}
-                    onChangeText={setTasksCompleted}
-                    placeholder="0"
-                    keyboardType="numeric"
-                  />
-                </View>
-                <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                  <Text style={styles.label}>Efficiency (%)</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={efficiency}
-                    onChangeText={setEfficiency}
-                    placeholder="0"
-                    keyboardType="numeric"
-                  />
-                </View>
               </View>
+            )}
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Customer Rating</Text>
-                <TextInput
-                  style={styles.input}
-                  value={customerRating}
-                  onChangeText={setCustomerRating}
-                  placeholder="0.0 - 5.0"
-                  keyboardType="numeric"
-                />
-              </View>
-
-              {status !== 'On Leave' && (
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Remarks (Optional)</Text>
-                  <TextInput
-                    style={[styles.input, styles.textArea]}
-                    value={remarks}
-                    onChangeText={setRemarks}
-                    placeholder="Add any remarks..."
-                    multiline
-                    numberOfLines={3}
-                  />
-                </View>
-              )}
-
-              <View style={styles.modalActions}>
-                <TouchableOpacity
-                  style={[styles.cancelButton, { marginRight: 8 }]}
-                  onPress={() => {
-                    setShowMarkModal(false);
-                    resetForm();
-                  }}
-                >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.submitButton}
-                  onPress={submitAttendance}
-                  disabled={submitting}
-                >
-                  {submitting ? (
-                    <ActivityIndicator color="white" size="small" />
-                  ) : (
-                    <Text style={styles.submitButtonText}>Mark Attendance</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.cancelButton, { marginRight: 8 }]}
+                onPress={() => setShowMarkModal(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.submitButton}
+                onPress={submitAttendance}
+                disabled={submitting}
+              >
+                {submitting ? (
+                  <ActivityIndicator color="white" size="small" />
+                ) : (
+                  <Text style={styles.submitButtonText}>Save</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+           </ScrollView>
           </View>
         </View>
       </Modal>
+
+      {showCheckInPicker && (
+        <DateTimePicker
+          value={checkIn || new Date()}
+          mode="time"
+          display={Platform.OS === 'android' ? 'clock' : 'spinner'}
+          is24Hour={true}
+          onChange={(event, date) => {
+            setShowCheckInPicker(false);
+            if (date) setCheckIn(date);
+          }}
+        />
+      )}
+
+      {showCheckOutPicker && (
+        <DateTimePicker
+          value={checkOut || new Date()}
+          mode="time"
+          display={Platform.OS === 'android' ? 'clock' : 'spinner'}
+          is24Hour={true}
+          onChange={(event, date) => {
+            setShowCheckOutPicker(false);
+            if (date) setCheckOut(date);
+          }}
+        />
+      )}
     </View>
   );
 };
@@ -463,30 +429,38 @@ const styles = StyleSheet.create({
     fontWeight: '600', 
     color: COLORS.black 
   },
-  addBtn: { 
+  navBtn: { 
     backgroundColor: COLORS.brandYellow, 
     borderRadius: 12, 
     padding: 8 
   },
-  perfBtn:     { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: COLORS.brandYellow, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8 },
-  perfBtnText: { fontSize: 12, fontWeight: '700', color: COLORS.black },
+  monthHeader: {
+    backgroundColor: COLORS.gray,
+    paddingBottom: 12,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+  monthText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.black,
+  },
   list: { 
     padding: 16, 
     paddingBottom: 40 
   },
-  attendanceCard: {
-    flexDirection: 'column',
+  staffCard: {
     backgroundColor: COLORS.white,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: COLORS.border,
-    padding: 14,
-    marginBottom: 10,
+    padding: 16,
+    marginBottom: 16,
   },
-  attendanceHeader: {
+  staffHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: 12,
   },
   staffInfo: {
@@ -496,73 +470,76 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: COLORS.black,
-    marginBottom: 4,
+    marginBottom: 2,
   },
-  staffId: {
-    fontSize: 12,
-    color: COLORS.gray,
+  staffMeta: {
+    fontSize: 13,
+    color: COLORS.textMuted,
   },
   statusBadge: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
   },
   statusText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: 'white',
+    fontSize: 11,
+    fontWeight: '700',
   },
-  attendanceDetails: {
-    marginBottom: 12,
+  calendarContainer: {
+    backgroundColor: COLORS.bgLight,
+    borderRadius: 12,
+    padding: 12,
   },
-  detailRow: {
+  calendarHeader: {
     flexDirection: 'row',
+    marginBottom: 8,
+  },
+  dayName: {
+    flex: 1,
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLORS.textMuted,
+    textAlign: 'center',
+  },
+  calendarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  calendarCell: {
+    width: '14.28%',
+    aspectRatio: 1,
     alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 6,
     marginBottom: 4,
   },
-  detailText: {
-    fontSize: 13,
-    color: COLORS.darkGray,
-    marginLeft: 8,
+  calendarCellEmpty: {
+    width: '14.28%',
+    aspectRatio: 1,
   },
-  performanceSection: {
-    backgroundColor: COLORS.lightGray,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
+  calendarCellToday: {
+    borderWidth: 2,
+    borderColor: COLORS.brandOrange,
   },
-  performanceTitle: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: COLORS.black,
-    marginBottom: 8,
+  calendarCellFuture: {
+    opacity: 0.3,
   },
-  performanceGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  performanceItem: {
-    alignItems: 'center',
-  },
-  performanceValue: {
-    fontSize: 16,
+  calendarCellText: {
+    fontSize: 12,
     fontWeight: '600',
+    color: COLORS.black,
+  },
+  calendarCellTextToday: {
     color: COLORS.brandOrange,
   },
-  performanceLabel: {
-    fontSize: 11,
-    color: COLORS.gray,
+  calendarCellTextFuture: {
+    color: COLORS.textMuted,
+  },
+  attendanceDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     marginTop: 2,
-  },
-  remarksSection: {
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
-    padding: 8,
-  },
-  remarksText: {
-    fontSize: 12,
-    color: COLORS.darkGray,
-    fontStyle: 'italic',
   },
   empty: { 
     alignItems: 'center', 
@@ -582,13 +559,18 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    maxHeight: '90%',
     padding: 24,
+    maxHeight: '80%',
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: COLORS.black,
+    marginBottom: 4,
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    color: COLORS.textMuted,
     marginBottom: 20,
   },
   inputGroup: {
@@ -602,39 +584,55 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: COLORS.lightGray,
+    borderColor: COLORS.border,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-  },
-  textArea: {
-    height: 80,
-    textAlignVertical: 'top',
   },
   timeRow: {
     flexDirection: 'row',
   },
-  dropdown: {
+  timePickerBtn: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 8,
     borderWidth: 1,
-    borderColor: COLORS.lightGray,
+    borderColor: COLORS.border,
     borderRadius: 8,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 12,
+    backgroundColor: COLORS.bgLight,
   },
-  dropdownText: {
+  timePickerText: {
     fontSize: 14,
+    fontWeight: '500',
     color: COLORS.black,
   },
-  sectionTitle: {
-    fontSize: 16,
+  statusButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  statusButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: COLORS.bgLight,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  statusButtonActive: {
+    backgroundColor: COLORS.brandOrange,
+    borderColor: COLORS.brandOrange,
+  },
+  statusButtonText: {
+    fontSize: 12,
     fontWeight: '600',
-    color: COLORS.black,
-    marginBottom: 16,
-    marginTop: 8,
+    color: COLORS.textDark,
+  },
+  statusButtonTextActive: {
+    color: COLORS.white,
   },
   modalActions: {
     flexDirection: 'row',
@@ -645,13 +643,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderWidth: 1,
-    borderColor: COLORS.lightGray,
+    borderColor: COLORS.border,
     borderRadius: 8,
   },
   cancelButtonText: {
     fontSize: 14,
     fontWeight: '500',
-    color: COLORS.darkGray,
+    color: COLORS.textDark,
   },
   submitButton: {
     paddingHorizontal: 20,
@@ -663,6 +661,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     color: 'white',
+  },
+  iosPickerWrap: {
+    backgroundColor: COLORS.bgLight,
+    borderRadius: 12,
+    marginTop: 8,
+    overflow: 'hidden',
+  },
+  iosPickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 12,
+    paddingTop: 8,
+  },
+  iosDoneBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  iosDoneText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.brandOrange,
+  },
+  iosPicker: {
+    height: 150,
   },
 });
 

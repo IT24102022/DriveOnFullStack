@@ -14,6 +14,7 @@ import {
   updateLearningTopic,
   deleteLearningTopic,
   reorderLearningTopics,
+  deleteAllLearningTopics,
 } from '../../../services/learningApi';
 
 export default function AdminTopicsScreen({ navigation }) {
@@ -28,7 +29,10 @@ export default function AdminTopicsScreen({ navigation }) {
 
   const load = useCallback(async () => {
     try {
-      await reorderLearningTopics();
+      // Reorder silently — don't block loading if it fails
+      try { await reorderLearningTopics(); } catch (e) {
+        console.log('Reorder failed (non-critical):', e.response?.status, e.response?.data?.message);
+      }
       const [topicsRes, lessonsRes] = await Promise.all([
         getLearningTopics(),
         getLearningLessons(),
@@ -40,8 +44,9 @@ export default function AdminTopicsScreen({ navigation }) {
         if (tid) counts[tid] = (counts[tid] || 0) + 1;
       });
       setLessonCounts(counts);
-    } catch {
-      Alert.alert('Error', 'Could not load topics');
+    } catch (err) {
+      console.log('Load topics error:', err.response?.status, JSON.stringify(err.response?.data));
+      Alert.alert('Error', err.response?.data?.message || 'Could not load topics');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -85,7 +90,8 @@ export default function AdminTopicsScreen({ navigation }) {
       setModalOpen(false);
       load();
     } catch (err) {
-      Alert.alert('Error', err.response?.data?.message || 'Could not save topic');
+      console.log('Save topic error:', err.response?.status, JSON.stringify(err.response?.data));
+      Alert.alert('Error', err.response?.data?.message || err.message || 'Could not save topic');
     }
   };
 
@@ -110,6 +116,29 @@ export default function AdminTopicsScreen({ navigation }) {
         },
       },
     ]);
+  };
+
+  const confirmDeleteAll = () => {
+    Alert.alert(
+      'Delete All Topics',
+      'This will permanently delete ALL topics, lessons, videos, and quizzes. This cannot be undone!',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete All',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteAllLearningTopics();
+              load();
+            } catch (err) {
+              console.log('Delete all error:', err.response?.status, JSON.stringify(err.response?.data));
+              Alert.alert('Error', err.response?.data?.message || err.message || 'Could not delete all topics');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const renderTopic = ({ item }) => {
@@ -160,9 +189,16 @@ export default function AdminTopicsScreen({ navigation }) {
           <Ionicons name="arrow-back" size={24} color={COLORS.black} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Learning Topics</Text>
-        <TouchableOpacity style={styles.addBtn} onPress={openCreate}>
-          <Ionicons name="add" size={22} color={COLORS.black} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          {topics.length > 0 && (
+            <TouchableOpacity style={styles.deleteAllBtn} onPress={confirmDeleteAll}>
+              <Ionicons name="trash-outline" size={18} color={COLORS.red} />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={styles.addBtn} onPress={openCreate}>
+            <Ionicons name="add" size={22} color={COLORS.black} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <FlatList
@@ -265,6 +301,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 18, fontWeight: '700', color: COLORS.black },
   addBtn: { backgroundColor: COLORS.brandYellow, borderRadius: 12, padding: 8 },
+  deleteAllBtn: { backgroundColor: COLORS.redBg, borderRadius: 12, padding: 8, borderWidth: 1, borderColor: '#FCA5A5' },
   list: { padding: 16, paddingBottom: 40 },
   card: { backgroundColor: COLORS.white, borderRadius: 16, borderWidth: 1, borderColor: COLORS.border, padding: 14, marginBottom: 10 },
   cardTop: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Alert, RefreshControl,
+  ActivityIndicator, Alert, RefreshControl, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +22,7 @@ export default function AvailableSessionsScreen({ navigation }) {
   const [refreshing,     setRefreshing]     = useState(false);
   const [activeTab,      setActiveTab]      = useState('available');
   const [bookingId,      setBookingId]      = useState(null);
+  const [feedbackModal, setFeedbackModal] = useState(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -167,8 +168,33 @@ export default function AvailableSessionsScreen({ navigation }) {
           <Ionicons name="person-outline" size={14} color={COLORS.textMuted} />
           <Text style={styles.detailText}>{item.instructor?.fullName || 'TBA'}</Text>
         </View>
-        {/* Rate session button for completed */}
-        {item.status === 'Completed' && (
+        {/* Feedback submitted badge */}
+        {item.hasFeedback && (
+          <TouchableOpacity
+            style={styles.feedbackSubmittedBadge}
+            onPress={() => setFeedbackModal(item.myFeedback)}
+          >
+            <Ionicons name="star" size={14} color={COLORS.brandOrange} />
+            <Text style={styles.feedbackSubmittedText}>
+              {item.myFeedback.rating}/5 {item.myFeedback.comment ? `· ${item.myFeedback.comment.substring(0, 30)}${item.myFeedback.comment.length > 30 ? '...' : ''}` : ''}
+            </Text>
+          </TouchableOpacity>
+        )}
+        {/* Mark attendance button for ongoing sessions */}
+        {item.status === 'Ongoing' && (
+          <TouchableOpacity
+            style={styles.markAttendanceBtn}
+            onPress={() => navigation.navigate('MarkAttendance', {
+              sessionId:   item._id,
+              sessionInfo: { sessionType: item.sessionType, date: item.date, startTime: item.startTime },
+            })}
+          >
+            <Ionicons name="checkmark-circle-outline" size={14} color={COLORS.brandOrange} />
+            <Text style={styles.markAttendanceBtnText}>Mark Attendance</Text>
+          </TouchableOpacity>
+        )}
+        {/* Rate session button for completed - only if not yet submitted */}
+        {item.status === 'Completed' && !item.hasFeedback && (
           <TouchableOpacity
             style={styles.rateBtn}
             onPress={() => navigation.navigate('Feedback', {
@@ -227,6 +253,37 @@ export default function AvailableSessionsScreen({ navigation }) {
           </View>
         }
       />
+
+      {/* Feedback Detail Modal */}
+      <Modal visible={!!feedbackModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Your Feedback</Text>
+              <TouchableOpacity onPress={() => setFeedbackModal(null)}>
+                <Ionicons name="close" size={24} color={COLORS.black} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.ratingStars}>
+              {[1, 2, 3, 4, 5].map(star => (
+                <Ionicons
+                  key={star}
+                  name={star <= feedbackModal?.rating ? 'star' : 'star-outline'}
+                  size={32}
+                  color={star <= feedbackModal?.rating ? '#FFB800' : COLORS.borderLight}
+                />
+              ))}
+            </View>
+            <Text style={styles.ratingText}>{feedbackModal?.rating}/5</Text>
+            {feedbackModal?.comment && (
+              <View style={styles.commentBox}>
+                <Text style={styles.commentLabel}>Your Comment:</Text>
+                <Text style={styles.commentText}>{feedbackModal.comment}</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -261,6 +318,19 @@ const styles = StyleSheet.create({
   bookedBtnText: { color: COLORS.green, fontWeight: '700', fontSize: 14 },
   rateBtn:       { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: COLORS.brandOrange, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 12, alignSelf: 'flex-start', marginTop: 10 },
   rateBtnText:   { fontSize: 12, fontWeight: '600', color: COLORS.brandOrange },
+  markAttendanceBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.brandOrange, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 12, alignSelf: 'flex-start', marginTop: 10 },
+  markAttendanceBtnText: { fontSize: 12, fontWeight: '600', color: COLORS.white },
+  feedbackSubmittedBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.greenBg, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 12, alignSelf: 'flex-start', marginTop: 10 },
+  feedbackSubmittedText: { fontSize: 12, fontWeight: '600', color: COLORS.green },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  modalContent: { backgroundColor: COLORS.white, borderRadius: 20, padding: 24, width: '100%', maxWidth: 400 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: COLORS.black },
+  ratingStars: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: 8 },
+  ratingText: { textAlign: 'center', fontSize: 24, fontWeight: '800', color: COLORS.black, marginBottom: 20 },
+  commentBox: { backgroundColor: COLORS.bgLight, borderRadius: 12, padding: 16 },
+  commentLabel: { fontSize: 12, fontWeight: '600', color: COLORS.textMuted, marginBottom: 6 },
+  commentText: { fontSize: 14, color: COLORS.black, lineHeight: 20 },
   empty:         { alignItems: 'center', paddingVertical: 60, gap: 12 },
   emptyText:     { fontSize: 14, color: COLORS.textMuted },
 });
