@@ -72,7 +72,7 @@ export default function LessonsTab({ navigation }) {
   };
 
   const getProgressForLesson = (lessonId) => {
-    const progress = lessonProgress.find(p => p.lesson._id === lessonId);
+    const progress = lessonProgress.find(p => p.lesson?._id === lessonId);
     return progress || { completionStatus: 'Not Started', progressPercentage: 0 };
   };
 

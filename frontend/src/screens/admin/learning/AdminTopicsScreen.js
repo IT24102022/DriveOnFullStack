@@ -12,6 +12,7 @@ import {
   createLearningTopic,
   updateLearningTopic,
   deleteLearningTopic,
+  deleteAllLearningTopics,
 } from '../../../services/learningApi';
 
 export default function AdminTopicsScreen({ navigation }) {
@@ -99,6 +100,28 @@ export default function AdminTopicsScreen({ navigation }) {
     ]);
   };
 
+  const confirmDeleteAll = () => {
+    Alert.alert(
+      'Delete All Topics',
+      'This will permanently delete ALL topics, lessons, videos, and quizzes. This cannot be undone!',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete All',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteAllLearningTopics();
+              load();
+            } catch (err) {
+              Alert.alert('Error', err.response?.data?.message || err.message || 'Could not delete all topics');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const renderTopic = ({ item }) => {
     if (!item || !item._id) {
       return null;
@@ -137,9 +160,16 @@ export default function AdminTopicsScreen({ navigation }) {
           <Ionicons name="arrow-back" size={24} color={COLORS.black} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Learning Topics</Text>
-        <TouchableOpacity style={styles.addBtn} onPress={openCreate}>
-          <Ionicons name="add" size={22} color={COLORS.black} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          {topics.length > 0 && (
+            <TouchableOpacity style={styles.deleteAllBtn} onPress={confirmDeleteAll}>
+              <Ionicons name="trash-outline" size={18} color={COLORS.red} />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={styles.addBtn} onPress={openCreate}>
+            <Ionicons name="add" size={22} color={COLORS.black} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <FlatList
@@ -242,6 +272,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 18, fontWeight: '700', color: COLORS.black },
   addBtn: { backgroundColor: COLORS.brandYellow, borderRadius: 12, padding: 8 },
+  deleteAllBtn: { backgroundColor: '#FEE2E2', borderRadius: 12, padding: 8, borderWidth: 1, borderColor: '#FCA5A5' },
   list: { padding: 16, paddingBottom: 40 },
   card: { backgroundColor: COLORS.white, borderRadius: 16, borderWidth: 1, borderColor: COLORS.border, padding: 14, marginBottom: 10 },
   cardTop: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },

@@ -29,6 +29,8 @@ export const getLearningTopicById = (id) => api.get(`/learning/topics/${id}`);
 export const createLearningTopic = (data) => api.post('/learning/topics', data);
 export const updateLearningTopic = (id, data) => api.put(`/learning/topics/${id}`, data);
 export const deleteLearningTopic = (id) => api.delete(`/learning/topics/${id}`);
+export const reorderLearningTopics = () => api.post('/learning/topics/reorder');
+export const deleteAllLearningTopics = () => api.delete('/learning/topics/delete-all');
 
 // ── Lessons (Admin) ───────────────────────────────────────────────────────────
 export const getLearningLessons = (params) => api.get('/learning/lessons', { params });

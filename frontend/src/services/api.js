@@ -3,15 +3,25 @@ import * as SecureStore from 'expo-secure-store';
 import Constants from 'expo-constants';
 
 // ── Backend URL ───────────────────────────────────────────────────────────────
-// In development (Expo Go): auto-detects your PC's IP from the Expo dev server.
-// In production (APK/deployed): uses the Render URL below.
+// Set USE_LOCAL_BACKEND to true  → connects to your local machine (port 5000)
+//                        false → connects to the online Render backend
 // ─────────────────────────────────────────────────────────────────────────────
-const DEPLOYED_URL = 'https://driveon-backend.onrender.com'; // ← update after deploying to Render
+const USE_LOCAL_BACKEND = true; // ← toggle this
+
+const DEPLOYED_URL = 'https://driveonfullstack.onrender.com';
+const LOCAL_IP = '192.168.8.152'; // ← update this if your WiFi IP changes
 
 const getBaseUrl = () => {
-  if (__DEV__) {
+  if (USE_LOCAL_BACKEND && __DEV__) {
     const hostUri = Constants.expoConfig?.hostUri ?? Constants.manifest?.debuggerHost;
-    if (hostUri) return `http://${hostUri.split(':')[0]}:5000`;
+    if (hostUri) {
+      const host = hostUri.split(':')[0];
+      // If host looks like a local IP, use it; otherwise fall back to LOCAL_IP
+      if (/^\d+\.\d+\.\d+\.\d+$/.test(host)) {
+        return `http://${host}:5000`;
+      }
+    }
+    return `http://${LOCAL_IP}:5000`;
   }
   return DEPLOYED_URL;
 };
