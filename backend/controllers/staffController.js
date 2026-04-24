@@ -322,35 +322,51 @@ const markStaffAttendance = async (req, res) => {
   try {
     const { staffId, date, checkIn, checkOut, status, remarks, performanceMetrics } = req.body;
 
-    // Check if attendance already exists for this date
+    // Check if attendance already exists for this date (UTC)
+    const [year, month, day] = date.split('-').map(Number);
+    const dateStart = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+    const dateEnd = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999));
+
     const existing = await StaffAttendance.findOne({
       staff: staffId,
-      date: new Date(date).setHours(0, 0, 0, 0)
+      date: { $gte: dateStart, $lte: dateEnd }
     });
 
     if (existing) {
-      return res.status(400).json({ 
-        message: 'Attendance already marked for this date' 
+      // Update existing attendance
+      existing.checkIn = checkIn || existing.checkIn;
+      existing.checkOut = checkOut || existing.checkOut;
+      existing.status = status;
+      if (remarks !== undefined) existing.remarks = remarks;
+      if (performanceMetrics) existing.performanceMetrics = { ...existing.performanceMetrics, ...performanceMetrics };
+      existing.verifiedBy = req.user.id;
+
+      await existing.save();
+
+      res.status(200).json({
+        message: 'Attendance updated successfully',
+        attendance: existing
+      });
+    } else {
+      // Create new attendance
+      const attendance = new StaffAttendance({
+        staff: staffId,
+        date: dateStart,
+        checkIn: checkIn || undefined,
+        checkOut: checkOut || undefined,
+        status,
+        remarks,
+        performanceMetrics,
+        verifiedBy: req.user.id
+      });
+
+      await attendance.save();
+
+      res.status(201).json({
+        message: 'Attendance marked successfully',
+        attendance
       });
     }
-
-    const attendance = new StaffAttendance({
-      staff: staffId,
-      date,
-      checkIn,
-      checkOut,
-      status,
-      remarks,
-      performanceMetrics,
-      verifiedBy: req.user.id
-    });
-
-    await attendance.save();
-
-    res.status(201).json({
-      message: 'Attendance marked successfully',
-      attendance
-    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

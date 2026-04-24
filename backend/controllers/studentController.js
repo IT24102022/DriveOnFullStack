@@ -121,7 +121,7 @@ const updateStudent = async (req, res) => {
     if (!student) return res.status(404).json({ message: 'Student not found' });
 
     const allowedFields = [
-      'firstName', 'lastName', 'contactNo', 'email', 'address',
+      'firstName', 'lastName', 'NIC', 'contactNo', 'email', 'address',
       'city', 'emergencyContactNo', 'dateOfBirth', 'gender', 'accountStatus',
     ];
 

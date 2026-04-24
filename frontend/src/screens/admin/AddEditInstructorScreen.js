@@ -70,13 +70,49 @@ export default function AddEditInstructorScreen({ route, navigation }) {
 
   const validate = () => {
     if (!form.fullName || !form.NIC || !form.email || !form.contactNumber) {
-      Alert.alert('Error', 'Please fill all required fields'); return false;
+      Alert.alert('Validation Error', 'Please fill all required fields'); return false;
     }
+
+    // 1. Date of birth must be valid and person must be at least 18 years old
+    if (form.dateOfBirth) {
+      const dob = new Date(form.dateOfBirth);
+      if (isNaN(dob.getTime())) {
+        Alert.alert('Validation Error', 'Invalid date of birth'); return false;
+      }
+      if (dob >= new Date()) {
+        Alert.alert('Validation Error', 'Invalid date of birth'); return false;
+      }
+      const minAgeDate = new Date();
+      minAgeDate.setFullYear(minAgeDate.getFullYear() - 18);
+      if (dob > minAgeDate) {
+        Alert.alert('Validation Error', 'Instructor must be at least 18 years old'); return false;
+      }
+    }
+
+    // 2. NIC: 12-digit number (e.g. 199532002972) OR 9 digits + V/v (e.g. 953202972V)
+    const nicNew = /^\d{12}$/;
+    const nicOld = /^\d{9}[Vv]$/;
+    if (!nicNew.test(form.NIC) && !nicOld.test(form.NIC)) {
+      Alert.alert('Validation Error', 'NIC must be either 12 digits (e.g. 199532002972) or 9 digits followed by V (e.g. 953202972V)'); return false;
+    }
+
+    // 3. Valid email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(form.email)) {
+      Alert.alert('Validation Error', 'Please enter a valid email address'); return false;
+    }
+
+    // 4. Contact number: exactly 10 digits, must start with 0
+    const contactRegex = /^0\d{9}$/;
+    if (!contactRegex.test(form.contactNumber)) {
+      Alert.alert('Validation Error', 'Contact number must be 10 digits and start with 0 (e.g. 0771234567)'); return false;
+    }
+
     if (!isEdit && !form.password) {
-      Alert.alert('Error', 'Password is required'); return false;
+      Alert.alert('Validation Error', 'Password is required'); return false;
     }
     if (form.password && form.password !== form.confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match'); return false;
+      Alert.alert('Validation Error', 'Passwords do not match'); return false;
     }
     return true;
   };
@@ -112,7 +148,7 @@ export default function AddEditInstructorScreen({ route, navigation }) {
 
   const fields = [
     { key: 'fullName',        label: 'Full Name *',              placeholder: 'John Silva' },
-    { key: 'NIC',             label: 'NIC *',                    placeholder: '200012345678' },
+    { key: 'NIC',             label: 'NIC *',                    placeholder: '200012345678', keyboard: 'default', autoCapitalize: 'none' },
     { key: 'dateOfBirth',     label: 'Date of Birth (YYYY-MM-DD)',placeholder: '1990-01-15' },
     { key: 'address',         label: 'Address',                  placeholder: 'No 10, Main Street' },
     { key: 'city',            label: 'City',                     placeholder: 'Colombo' },
@@ -157,7 +193,7 @@ export default function AddEditInstructorScreen({ route, navigation }) {
               value={form[f.key]}
               onChangeText={(v) => handleChange(f.key, v)}
               keyboardType={f.keyboard || 'default'}
-              autoCapitalize={f.keyboard === 'email-address' ? 'none' : 'words'}
+              autoCapitalize={f.autoCapitalize !== undefined ? f.autoCapitalize : (f.keyboard === 'email-address' ? 'none' : 'words')}
             />
           </View>
         ))}

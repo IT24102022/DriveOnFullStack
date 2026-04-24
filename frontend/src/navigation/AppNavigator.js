@@ -67,6 +67,8 @@ import TakeAttendanceScreen      from '../screens/admin/TakeAttendanceScreen';
 import AttendanceAnalyticsScreen from '../screens/admin/AttendanceAnalyticsScreen';
 import StudentProgressScreen     from '../screens/admin/StudentProgressScreen';
 import AvailableSessionsScreen   from '../screens/student/AvailableSessionsScreen';
+import MarkAttendanceScreen     from '../screens/student/MarkAttendanceScreen';
+import ConfirmAttendanceScreen  from '../screens/instructor/ConfirmAttendanceScreen';
 
 import LearningCatalogScreen from '../screens/student/learning/LearningCatalogScreen';
 import LessonDetailScreen from '../screens/student/learning/LessonDetailScreen';
@@ -81,6 +83,10 @@ import AdminLessonDetailScreen  from '../screens/admin/learning/AdminLessonDetai
 import AdminQuizBuilderScreen   from '../screens/admin/learning/AdminQuizBuilderScreen';
 import AdminQuizAnalyticsScreen from '../screens/admin/learning/AdminQuizAnalyticsScreen';
 import CreateLearningContentScreen from '../screens/admin/learning/CreateLearningContentScreen';
+import AdminVideoUploadScreen   from '../screens/admin/learning/AdminVideoUploadScreen';
+import AdminLessonVideosScreen  from '../screens/admin/learning/AdminLessonVideosScreen';
+import AdminQuizLessonsScreen   from '../screens/admin/learning/AdminQuizLessonsScreen';
+import AdminLessonQuizzesScreen from '../screens/admin/learning/AdminLessonQuizzesScreen';
 
 // Staff Management Imports
 import StaffListScreen from '../screens/admin/staff/StaffListScreen';
@@ -228,6 +234,10 @@ export default function AppNavigator() {
         <Stack.Screen name="AdminQuizBuilder"      component={AdminQuizBuilderScreen} />
         <Stack.Screen name="AdminQuizAnalytics"    component={AdminQuizAnalyticsScreen} />
         <Stack.Screen name="CreateLearningContent" component={CreateLearningContentScreen} />
+        <Stack.Screen name="AdminVideoUpload"      component={AdminVideoUploadScreen} />
+        <Stack.Screen name="AdminLessonVideos"     component={AdminLessonVideosScreen} />
+        <Stack.Screen name="AdminQuizLessons"      component={AdminQuizLessonsScreen} />
+        <Stack.Screen name="AdminLessonQuizzes"    component={AdminLessonQuizzesScreen} />
         
         {/* Exam System Routes */}
         <Stack.Screen name="ExamDashboard"      component={ExamDashboardScreen} />
@@ -273,6 +283,7 @@ export default function AppNavigator() {
         <Stack.Screen name="AddPayment"  component={AddPaymentScreen} />
         <Stack.Screen name="BookSession" component={BookSessionScreen} />
         <Stack.Screen name="AvailableSessions" component={AvailableSessionsScreen} />
+        <Stack.Screen name="MarkAttendance" component={MarkAttendanceScreen} />
         <Stack.Screen name="LearningCatalog" component={LearningCatalogScreen} />
         <Stack.Screen name="StudentExams" component={StudentExamsScreen} />
         <Stack.Screen name="StudentExamDetails" component={StudentExamDetailsScreen} />
@@ -293,6 +304,7 @@ export default function AppNavigator() {
         <Stack.Screen name="InstructorNotifications" component={InstructorNotificationsScreen} />
         <Stack.Screen name="InstructorExams"         component={InstructorExamsScreen} />
         <Stack.Screen name="InstructorExamDetails"   component={InstructorExamDetailsScreen} />
+        <Stack.Screen name="ConfirmAttendance"       component={ConfirmAttendanceScreen} />
       </Stack.Navigator>
     );
   }

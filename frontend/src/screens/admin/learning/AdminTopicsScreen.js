@@ -9,14 +9,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../../theme';
 import {
   getLearningTopics,
+  getLearningLessons,
   createLearningTopic,
   updateLearningTopic,
   deleteLearningTopic,
+  reorderLearningTopics,
   deleteAllLearningTopics,
 } from '../../../services/learningApi';
 
 export default function AdminTopicsScreen({ navigation }) {
   const [topics, setTopics] = useState([]);
+  const [lessonCounts, setLessonCounts] = useState({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -26,10 +29,24 @@ export default function AdminTopicsScreen({ navigation }) {
 
   const load = useCallback(async () => {
     try {
-      const res = await getLearningTopics();
-      setTopics(res.data || []);
-    } catch {
-      Alert.alert('Error', 'Could not load topics');
+      // Reorder silently — don't block loading if it fails
+      try { await reorderLearningTopics(); } catch (e) {
+        console.log('Reorder failed (non-critical):', e.response?.status, e.response?.data?.message);
+      }
+      const [topicsRes, lessonsRes] = await Promise.all([
+        getLearningTopics(),
+        getLearningLessons(),
+      ]);
+      setTopics(topicsRes.data || []);
+      const counts = {};
+      (lessonsRes.data || []).forEach((l) => {
+        const tid = l.topic?._id || l.topic;
+        if (tid) counts[tid] = (counts[tid] || 0) + 1;
+      });
+      setLessonCounts(counts);
+    } catch (err) {
+      console.log('Load topics error:', err.response?.status, JSON.stringify(err.response?.data));
+      Alert.alert('Error', err.response?.data?.message || 'Could not load topics');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -73,7 +90,8 @@ export default function AdminTopicsScreen({ navigation }) {
       setModalOpen(false);
       load();
     } catch (err) {
-      Alert.alert('Error', err.response?.data?.message || 'Could not save topic');
+      console.log('Save topic error:', err.response?.status, JSON.stringify(err.response?.data));
+      Alert.alert('Error', err.response?.data?.message || err.message || 'Could not save topic');
     }
   };
 
@@ -114,6 +132,7 @@ export default function AdminTopicsScreen({ navigation }) {
               await deleteAllLearningTopics();
               load();
             } catch (err) {
+              console.log('Delete all error:', err.response?.status, JSON.stringify(err.response?.data));
               Alert.alert('Error', err.response?.data?.message || err.message || 'Could not delete all topics');
             }
           },
@@ -123,10 +142,8 @@ export default function AdminTopicsScreen({ navigation }) {
   };
 
   const renderTopic = ({ item }) => {
-    if (!item || !item._id) {
-      return null;
-    }
-    
+    if (!item || !item._id) return null;
+    const lessons = lessonCounts[item._id] || 0;
     return (
       <TouchableOpacity
         style={styles.card}
@@ -136,7 +153,19 @@ export default function AdminTopicsScreen({ navigation }) {
           <View style={styles.flex1}>
             <Text style={styles.cardTitle}>{item.title}</Text>
             {!!item.description && <Text style={styles.cardMeta} numberOfLines={2}>{item.description}</Text>}
-            <Text style={styles.cardMeta}>Order: {item.displayOrder ?? 0} · {item.status}</Text>
+            <View style={styles.summaryRow}>
+              <View style={styles.summaryBadge}>
+                <Ionicons name="book-outline" size={12} color={COLORS.blue} />
+                <Text style={styles.summaryText}>{lessons} lesson{lessons !== 1 ? 's' : ''}</Text>
+              </View>
+              <View style={styles.summaryBadge}>
+                <Ionicons name="layers-outline" size={12} color={COLORS.textMuted} />
+                <Text style={styles.summaryText}>Order {item.displayOrder ?? 0}</Text>
+              </View>
+              <View style={[styles.summaryBadge, item.status === 'Active' ? styles.badgeActive : styles.badgeInactive]}>
+                <Text style={[styles.summaryText, item.status === 'Active' ? styles.badgeActiveText : styles.badgeInactiveText]}>{item.status}</Text>
+              </View>
+            </View>
           </View>
           <View style={styles.actions}>
             <TouchableOpacity style={styles.iconBtn} onPress={() => openEdit(item)}>
@@ -272,7 +301,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 18, fontWeight: '700', color: COLORS.black },
   addBtn: { backgroundColor: COLORS.brandYellow, borderRadius: 12, padding: 8 },
-  deleteAllBtn: { backgroundColor: '#FEE2E2', borderRadius: 12, padding: 8, borderWidth: 1, borderColor: '#FCA5A5' },
+  deleteAllBtn: { backgroundColor: COLORS.redBg, borderRadius: 12, padding: 8, borderWidth: 1, borderColor: '#FCA5A5' },
   list: { padding: 16, paddingBottom: 40 },
   card: { backgroundColor: COLORS.white, borderRadius: 16, borderWidth: 1, borderColor: COLORS.border, padding: 14, marginBottom: 10 },
   cardTop: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
@@ -281,6 +310,13 @@ const styles = StyleSheet.create({
   flex1: { flex: 1 },
   actions: { gap: 6, alignItems: 'flex-end' },
   iconBtn: { padding: 8, borderRadius: 10, backgroundColor: COLORS.bgLight },
+  summaryRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
+  summaryBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: COLORS.bgLight, borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: COLORS.border },
+  summaryText: { fontSize: 11, fontWeight: '600', color: COLORS.textMuted },
+  badgeActive: { backgroundColor: '#DCFCE7', borderColor: '#86EFAC' },
+  badgeActiveText: { color: '#16A34A' },
+  badgeInactive: { backgroundColor: '#FEE2E2', borderColor: '#FCA5A5' },
+  badgeInactiveText: { color: '#DC2626' },
   empty: { alignItems: 'center', paddingVertical: 60, gap: 12 },
   emptyText: { fontSize: 14, color: COLORS.textMuted, textAlign: 'center' },
 

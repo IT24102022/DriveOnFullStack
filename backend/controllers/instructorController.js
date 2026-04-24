@@ -104,7 +104,7 @@ const updateInstructor = async (req, res) => {
     if (!instructor) return res.status(404).json({ message: 'Instructor not found' });
 
     const allowedFields = [
-      'fullName', 'dateOfBirth', 'address', 'city', 'gender',
+      'fullName', 'NIC', 'dateOfBirth', 'address', 'city', 'gender',
       'email', 'contactNumber', 'emergencyContact', 'licenseNo',
       'experience', 'specialization', 'available',
     ];

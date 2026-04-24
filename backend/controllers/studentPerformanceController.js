@@ -10,9 +10,13 @@ const getStudentPerformance = async (req, res) => {
   try {
     const studentId = req.user.id;
 
-    // Get student's quiz attempts
+    // Get student's quiz attempts with lesson data
     const quizAttempts = await LearningQuizAttempt.find({ student: studentId })
-      .populate('quiz', 'title passMark')
+      .populate({
+        path: 'quiz',
+        select: 'title passMark language lesson',
+        populate: { path: 'lesson', select: 'title' }
+      })
       .sort({ submittedAt: -1 });
 
     // Get student's lesson progress
@@ -26,36 +30,72 @@ const getStudentPerformance = async (req, res) => {
     const totalScore = quizAttempts.reduce((sum, a) => sum + (a.percentage || 0), 0);
     const averageScore = totalQuizzes > 0 ? Math.round((totalScore / totalQuizzes) * 10) / 10 : 0;
 
-    // Group quiz scores by quiz title for detailed view
-    const quizScoresMap = new Map();
+// Group quiz attempts by lesson → quiz → attempts
+    const quizPerformanceByLesson = new Map();
+    
     quizAttempts.forEach(attempt => {
-      const quizTitle = attempt.quiz?.title || 'Unknown Quiz';
-      if (!quizScoresMap.has(quizTitle)) {
-        quizScoresMap.set(quizTitle, {
-          quiz: quizTitle,
-          scores: [],
-          average: 0,
-          trend: 'stable',
-          attempts: 0,
+      const quiz = attempt.quiz;
+      if (!quiz) return;
+      
+      const lessonTitle = quiz.lesson?.title || 'General';
+      const quizTitle = quiz.title || 'Unknown Quiz';
+      
+      // Initialize lesson if not exists
+      if (!quizPerformanceByLesson.has(lessonTitle)) {
+        quizPerformanceByLesson.set(lessonTitle, {
+          lesson: lessonTitle,
+          quizzes: new Map(), // quizTitle -> quiz data
+          totalQuizzes: 0,
+          totalAttempts: 0,
         });
       }
-      const quizData = quizScoresMap.get(quizTitle);
-      quizData.scores.push(attempt.percentage || 0);
-      quizData.attempts++;
-    });
-
-    // Calculate averages and trends for each quiz
-    quizScoresMap.forEach((data) => {
-      data.average = data.scores.reduce((sum, score) => sum + score, 0) / data.scores.length;
+      const lessonData = quizPerformanceByLesson.get(lessonTitle);
       
-      // Simple trend calculation
-      if (data.scores.length >= 2) {
-        const recent = data.scores.slice(-3);
-        const recentAvg = recent.reduce((sum, score) => sum + score, 0) / recent.length;
-        const earlierAvg = data.scores.slice(0, -3).reduce((sum, score) => sum + score, 0) / Math.max(1, data.scores.length - 3);
-        data.trend = recentAvg > earlierAvg + 5 ? 'up' : recentAvg < earlierAvg - 5 ? 'down' : 'stable';
+      // Initialize quiz if not exists
+      if (!lessonData.quizzes.has(quizTitle)) {
+        lessonData.quizzes.set(quizTitle, {
+          quizTitle: quizTitle,
+          totalAttempts: 0,
+          attempts: [],
+          bestScore: 0,
+          passed: false,
+        });
+        lessonData.totalQuizzes++;
+      }
+      const quizData = lessonData.quizzes.get(quizTitle);
+      
+      // Add attempt
+      quizData.attempts.push({
+        attemptNumber: attempt.attemptNumber || 1,
+        score: attempt.percentage || 0,
+        status: attempt.status,
+        submittedAt: attempt.submittedAt,
+      });
+      quizData.totalAttempts++;
+      lessonData.totalAttempts++;
+      
+      // Update best score and pass status
+      if (attempt.percentage > quizData.bestScore) {
+        quizData.bestScore = attempt.percentage;
+      }
+      if (attempt.status === 'Passed') {
+        quizData.passed = true;
       }
     });
+    
+    // Convert Maps to arrays for JSON response
+    const quizPerformanceData = Array.from(quizPerformanceByLesson.values()).map(lesson => ({
+      lesson: lesson.lesson,
+      totalQuizzes: lesson.totalQuizzes,
+      totalAttempts: lesson.totalAttempts,
+      quizzes: Array.from(lesson.quizzes.values()).map(quiz => ({
+        quizTitle: quiz.quizTitle,
+        totalAttempts: quiz.totalAttempts,
+        bestScore: quiz.bestScore,
+        passed: quiz.passed,
+        attempts: quiz.attempts.sort((a, b) => a.attemptNumber - b.attemptNumber), // Sort by attempt number
+      })),
+    }));
 
     // Calculate lesson statistics
     const totalLessons = lessonProgress.length;
@@ -119,7 +159,7 @@ const getStudentPerformance = async (req, res) => {
         totalAttempts: quizAttempts.length,
         studyTime: studyTimeHours,
       },
-      quizScores: Array.from(quizScoresMap.values()),
+      quizPerformanceByLesson: quizPerformanceData,
       attendance: {
         theory: {
           attended: completedLessons,

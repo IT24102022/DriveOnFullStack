@@ -12,7 +12,9 @@ const staffAttendanceSchema = new mongoose.Schema({
   },
   checkIn: {
     type: Date,
-    required: true
+    required: function() {
+      return !['Present', 'Absent', 'On Leave'].includes(this.status);
+    }
   },
   checkOut: {
     type: Date
