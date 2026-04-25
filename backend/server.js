@@ -40,6 +40,7 @@ app.use('/api/exam-attendance', require('./routes/examAttendance'));
 app.use('/api/exam-results', require('./routes/examResults'));
 app.use('/api/student-exams', require('./routes/studentExams'));
 app.use('/api/attendance', require('./routes/attendance'));
+app.use('/api/study-materials', require('./routes/studyMaterial'));
 
 // Health check
 app.get('/', (req, res) => {

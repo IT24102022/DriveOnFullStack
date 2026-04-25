@@ -87,6 +87,7 @@ import AdminVideoUploadScreen   from '../screens/admin/learning/AdminVideoUpload
 import AdminLessonVideosScreen  from '../screens/admin/learning/AdminLessonVideosScreen';
 import AdminQuizLessonsScreen   from '../screens/admin/learning/AdminQuizLessonsScreen';
 import AdminLessonQuizzesScreen from '../screens/admin/learning/AdminLessonQuizzesScreen';
+import AdminStudyMaterialScreen from '../screens/admin/learning/AdminStudyMaterialScreen';
 
 // Staff Management Imports
 import StaffListScreen from '../screens/admin/staff/StaffListScreen';
@@ -238,6 +239,7 @@ export default function AppNavigator() {
         <Stack.Screen name="AdminLessonVideos"     component={AdminLessonVideosScreen} />
         <Stack.Screen name="AdminQuizLessons"      component={AdminQuizLessonsScreen} />
         <Stack.Screen name="AdminLessonQuizzes"    component={AdminLessonQuizzesScreen} />
+        <Stack.Screen name="AdminStudyMaterial"    component={AdminStudyMaterialScreen} />
         
         {/* Exam System Routes */}
         <Stack.Screen name="ExamDashboard"      component={ExamDashboardScreen} />

@@ -66,10 +66,10 @@ export default function CreateLearningContentScreen({ navigation }) {
     {
       id: 'material',
       title: 'Add Study Material',
-      description: 'Select a topic → lesson, then add materials',
+      description: 'Upload images, videos, PDFs, and documents',
       icon: 'document-text-outline',
       color: COLORS.purple,
-      screen: 'AdminTopics',
+      screen: 'AdminStudyMaterial',
     },
   ];
 

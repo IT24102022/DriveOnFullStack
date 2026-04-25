@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet,
@@ -28,9 +28,10 @@ export default function AdminLessonQuizzesScreen({ route, navigation }) {
     }
   }, [lessonId]);
 
-  useEffect(() => { load(); }, [load]);
-
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+  useFocusEffect(useCallback(() => {
+    setLoading(true);
+    load();
+  }, [load]));
 
   const confirmDelete = (quiz) => {
     Alert.alert('Delete Quiz', `Delete "${quiz.title}"? This cannot be undone.`, [

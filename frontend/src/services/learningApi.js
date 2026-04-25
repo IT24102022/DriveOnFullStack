@@ -78,6 +78,13 @@ export const deleteLearningQuiz = (id) => api.delete(`/learning/quizzes/${id}`);
 export const deleteAllLearningQuizzes = (lessonId) => api.delete(`/learning/quizzes/all/${lessonId}`);
 export const deleteAllLearningQuizzesGlobal = () => api.delete('/learning/quizzes/delete-all');
 
+// ── Study Materials (Admin) ──────────────────────────────────────────────────
+export const getStudyMaterials = (params) => api.get('/study-materials', { params });
+export const getStudyMaterialById = (id) => api.get(`/study-materials/${id}`);
+export const createStudyMaterial = (data) => api.post('/study-materials', data, { headers: { 'Content-Type': 'multipart/form-data' } });
+export const updateStudyMaterial = (id, data) => api.put(`/study-materials/${id}`, data, { headers: { 'Content-Type': 'multipart/form-data' } });
+export const deleteStudyMaterial = (id) => api.delete(`/study-materials/${id}`);
+
 // ── Analytics (Admin) ─────────────────────────────────────────────────────────
 export const getLearningQuizAnalytics = (quizId) => api.get(`/learning/analytics/quizzes/${quizId}`);
 export const getLearningLessonAnalytics = (lessonId) => api.get(`/learning/analytics/lessons/${lessonId}`);
